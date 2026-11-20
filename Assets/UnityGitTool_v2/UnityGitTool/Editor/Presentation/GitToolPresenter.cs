@@ -22,6 +22,8 @@ namespace UnityGitTool.Presentation
         private IReadOnlyList<GitBranch> _branchList = Array.Empty<GitBranch>();
         private string _pushBlockedReason;
         private string _accountName;
+        private string _repositoryNameInput; // null = el usuario aún no lo ha tocado (se usa el nombre por defecto)
+        private string _branchNameInput = string.Empty;
         private CancellationTokenSource _cancellation;
         private Task _backgroundRefresh = Task.CompletedTask;
         private bool _isBusy;
@@ -105,14 +107,20 @@ namespace UnityGitTool.Presentation
 
         private void OnBranchNameEdited(string raw)
         {
-            var fixedName = _deps.BranchNames.SanitizeWhileTyping(raw);
+            var fixedName = _deps.BranchNames.SanitizeWhileTyping(raw ?? string.Empty);
             if (fixedName != raw) _view.ShowBranchName(fixedName);
+
+            _branchNameInput = fixedName;
+            Render(); // Actualiza la vista previa en cada pulsación.
         }
 
         private void OnRepositoryNameEdited(string raw)
         {
-            var fixedName = _deps.RepositoryNames.SanitizeWhileTyping(raw);
+            var fixedName = _deps.RepositoryNames.SanitizeWhileTyping(raw ?? string.Empty);
             if (fixedName != raw) _view.ShowRepositoryName(fixedName);
+
+            _repositoryNameInput = fixedName;
+            Render();
         }
 
         // ---------------------------------------------------------------- Acciones
@@ -234,10 +242,15 @@ namespace UnityGitTool.Presentation
             {
                 Log($"Nombre de rama ajustado a '{name}'.", LogSeverity.Info);
                 _view.ShowBranchName(name);
+                _branchNameInput = name;
             }
 
             if (await ExecuteAsync("Creando rama...", ct => _deps.Branches.CreateBranchAsync(name, ct)))
+            {
+                _branchNameInput = string.Empty;
                 _view.ClearNewBranchName();
+                Render();
+            }
         }
 
         private async Task DeleteBranchAsync(GitBranch branch)
@@ -323,6 +336,7 @@ namespace UnityGitTool.Presentation
             {
                 if (request.Name.Length > 0) Log($"Nombre del repositorio ajustado a '{request.Name}'.", LogSeverity.Info);
                 _view.ShowRepositoryName(request.Name);
+                _repositoryNameInput = request.Name;
             }
 
             if (!_deps.Tokens.HasToken)
@@ -531,12 +545,53 @@ namespace UnityGitTool.Presentation
                 IsCurrentBranchProtected = _deps.BranchProtection.IsProtected(_status.CurrentBranch),
                 PushBlockedReason = _pushBlockedReason,
                 HasCompileErrors = _deps.Health.HasCompileErrors,
+                RepositoryPreview = BuildRepositoryPreview(),
+                BranchPreview = BuildBranchPreview(),
                 HasToken = _deps.Tokens.HasToken,
                 AccountName = _accountName,
                 HostName = _deps.Host.DisplayName,
                 TokenCreationUrl = _deps.Host.TokenCreationUrl,
                 DefaultRepositoryName = _deps.RepositoryNames.Sanitize(_deps.Project.Name)
             });
+        }
+
+        // ---------------------------------------------------------------- Vistas previas de nombres
+
+        private NamePreview BuildRepositoryPreview()
+        {
+            var raw = _repositoryNameInput ?? _deps.Project.Name;
+            var name = _deps.RepositoryNames.Sanitize(raw);
+            if (name.Length == 0)
+                return NamePreview.Invalid("Escribe un nombre: sólo letras, números, '.', '-' y '_'.");
+
+            var owner = _accountName ?? "tu-usuario";
+            var note = name != raw.Trim() ? $"Se creará como '{name}' (se limpian guiones y puntos sobrantes)." : null;
+            return NamePreview.Valid($"Se verá en {_deps.Host.DisplayName} como:", $"{owner} / {name}",
+                _deps.Host.BuildRepositoryUrl(owner, name), note);
+        }
+
+        private NamePreview BuildBranchPreview()
+        {
+            if (string.IsNullOrWhiteSpace(_branchNameInput)) return null;
+
+            var name = _deps.BranchNames.Sanitize(_branchNameInput);
+            if (name.Length == 0)
+                return NamePreview.Invalid("Ese nombre no es válido para una rama.");
+
+            var notes = new List<string>();
+            if (name != _branchNameInput.Trim()) notes.Add($"Se creará como '{name}'.");
+            if (_branchList.Any(b => b.LocalName == name)) notes.Add("Ya existe una rama con este nombre.");
+
+            if (!_status.HasRemote)
+            {
+                notes.Add($"Es una rama local: aparecerá en {_deps.Host.DisplayName} cuando publiques el repositorio y hagas push.");
+                return NamePreview.Valid("Se creará la rama:", name, null, string.Join(" ", notes));
+            }
+
+            notes.Add($"Aparecerá en {_deps.Host.DisplayName} después de su primer push.");
+            var repositoryUrl = RemoteUrlFormatter.ToWebUrl(_status.RemoteUrl);
+            return NamePreview.Valid($"Se verá en {_deps.Host.DisplayName} como:", name,
+                _deps.Host.BuildBranchUrl(repositoryUrl, name), string.Join(" ", notes));
         }
 
         private bool RequireRemote()

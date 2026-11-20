@@ -25,6 +25,13 @@ namespace UnityGitTool.GitHub
 
         public GitHubRepositoryHost(IAccessTokenStore tokens) => _tokens = tokens;
 
+        public string BuildRepositoryUrl(string owner, string repositoryName) =>
+            $"https://github.com/{owner}/{repositoryName}";
+
+        public string BuildBranchUrl(string repositoryWebUrl, string branchName) =>
+            // Cada tramo de la rama se escapa, pero las "/" se mantienen (así lo muestra GitHub).
+            $"{repositoryWebUrl?.TrimEnd('/')}/tree/{string.Join("/", branchName.Split('/').Select(Uri.EscapeDataString))}";
+
         public async Task<OperationResult<RemoteAccount>> AuthenticateAsync(CancellationToken ct)
         {
             if (!_tokens.HasToken) return OperationResult<RemoteAccount>.Fail("No hay ningún token de GitHub configurado.");

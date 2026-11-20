@@ -14,6 +14,12 @@ namespace UnityGitTool.Hosting
         string TokenCreationUrl { get; }
         Task<OperationResult<RemoteAccount>> AuthenticateAsync(CancellationToken cancellationToken);
         Task<OperationResult<RemoteRepository>> CreateRepositoryAsync(CreateRepositoryRequest request, CancellationToken cancellationToken);
+
+        /// <summary>URL web que tendrá un repositorio (p. ej. https://github.com/usuario/repo).</summary>
+        string BuildRepositoryUrl(string owner, string repositoryName);
+
+        /// <summary>URL web de una rama dentro de un repositorio.</summary>
+        string BuildBranchUrl(string repositoryWebUrl, string branchName);
     }
 
     public interface IAccessTokenStore

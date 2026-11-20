@@ -61,6 +61,7 @@ namespace UnityGitTool.Views
         [SerializeField] private bool _hideMetaFiles = true;
         [SerializeField] private string _newBranchName = string.Empty;
         [SerializeField] private string _repositoryName = string.Empty;
+        [SerializeField] private bool _repositoryNameInitialized;
         [SerializeField] private string _repositoryDescription = string.Empty;
         [SerializeField] private bool _repositoryPrivate = true;
         [SerializeField] private PullStrategy _pullStrategy = PullStrategy.FastForwardOnly;
@@ -95,6 +96,11 @@ namespace UnityGitTool.Views
             _gitExecutableInput = EditorPrefs.GetString(GitToolComposer.GitExecutablePrefKey, "git");
             _presenter = GitToolComposer.Compose(this);
             _presenter.Initialize();
+
+            // Tras recompilar, los textos escritos sobreviven: se los pasamos al presentador
+            // para que la vista previa refleje lo que hay en los campos.
+            if (_repositoryNameInitialized) RepositoryNameEdited?.Invoke(_repositoryName);
+            if (!string.IsNullOrEmpty(_newBranchName)) BranchNameEdited?.Invoke(_newBranchName);
         }
 
         private void OnDisable()
@@ -111,8 +117,12 @@ namespace UnityGitTool.Views
         {
             _state = state ?? GitToolViewState.Empty;
 
-            if (string.IsNullOrEmpty(_repositoryName))
+            // Sólo la primera vez: si el usuario borra el campo, no se vuelve a rellenar solo.
+            if (!_repositoryNameInitialized && !string.IsNullOrEmpty(_state.DefaultRepositoryName))
+            {
                 _repositoryName = _state.DefaultRepositoryName;
+                _repositoryNameInitialized = true;
+            }
 
             _branchLabels = _state.Branches.Select(ToLabel).ToArray();
 
@@ -291,8 +301,12 @@ namespace UnityGitTool.Views
                 if (editedName != _repositoryName)
                 {
                     _repositoryName = editedName;
+                    _repositoryNameInitialized = true;
                     RepositoryNameEdited?.Invoke(editedName); // El presentador lo corrige si hace falta.
                 }
+
+                DrawNamePreview(_state.RepositoryPreview);
+
                 _repositoryDescription = EditorGUILayout.TextField("Descripción", _repositoryDescription);
                 _repositoryPrivate = EditorGUILayout.Toggle("Privado", _repositoryPrivate);
 
@@ -441,6 +455,8 @@ namespace UnityGitTool.Views
                         CreateBranchRequested?.Invoke(_newBranchName);
                 }
             }
+
+            DrawNamePreview(_state.BranchPreview);
 
             DrawDeleteBranch();
         }
@@ -597,6 +613,31 @@ namespace UnityGitTool.Views
             var rect = GUILayoutUtility.GetLastRect();
             rect.x += 4;
             GUI.Label(rect, placeholder, _placeholderStyle);
+        }
+
+        /// <summary>Recuadro bajo un campo de nombre con cómo quedará en GitHub (lo calcula el presentador).</summary>
+        private static void DrawNamePreview(NamePreview preview)
+        {
+            if (preview == null) return;
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                if (!preview.IsValid)
+                {
+                    EditorGUILayout.LabelField("⚠ " + preview.Note, EditorStyles.wordWrappedMiniLabel);
+                    return;
+                }
+
+                EditorGUILayout.LabelField(preview.Heading, EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(preview.DisplayName, EditorStyles.boldLabel);
+
+                // Seleccionable para poder copiar la URL.
+                if (!string.IsNullOrEmpty(preview.Url))
+                    EditorGUILayout.SelectableLabel(preview.Url, EditorStyles.miniLabel, GUILayout.Height(EditorGUIUtility.singleLineHeight));
+
+                if (!string.IsNullOrEmpty(preview.Note))
+                    EditorGUILayout.LabelField(preview.Note, EditorStyles.wordWrappedMiniLabel);
+            }
         }
 
         private static string KindName(FileChangeKind kind)
