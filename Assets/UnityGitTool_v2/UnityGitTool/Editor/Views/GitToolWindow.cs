@@ -70,9 +70,12 @@ namespace UnityGitTool.Views
         private Vector2 _scroll;
         private Vector2 _changesScroll;
         private Vector2 _logScroll;
-        private GUIStyle _logInfoStyle, _logSuccessStyle, _logWarningStyle, _logErrorStyle;
-        private GUIStyle _placeholderStyle, _changePathStyle;
-        private readonly Dictionary<FileChangeKind, GUIStyle> _changeBadgeStyles = new Dictionary<FileChangeKind, GUIStyle>();
+        // [NonSerialized]: al recompilar, Unity conserva los campos privados de la ventana. Sin esto,
+        // los estilos de la versión anterior sobreviven y los nuevos se quedan a null.
+        [NonSerialized] private bool _stylesReady;
+        [NonSerialized] private GUIStyle _logInfoStyle, _logSuccessStyle, _logWarningStyle, _logErrorStyle;
+        [NonSerialized] private GUIStyle _placeholderStyle, _changePathStyle;
+        [NonSerialized] private Dictionary<FileChangeKind, GUIStyle> _changeBadgeStyles;
 
         [MenuItem("Tools/Git Tool")]
         public static void Open()
@@ -548,7 +551,9 @@ namespace UnityGitTool.Views
 
         private void EnsureStyles()
         {
-            if (_logInfoStyle != null) return;
+            if (_stylesReady) return;
+
+            _changeBadgeStyles = new Dictionary<FileChangeKind, GUIStyle>();
 
             _placeholderStyle = new GUIStyle(EditorStyles.label) { normal = { textColor = new Color(0.5f, 0.5f, 0.5f) } };
             _changePathStyle = new GUIStyle(EditorStyles.label) { clipping = TextClipping.Clip };
@@ -560,6 +565,8 @@ namespace UnityGitTool.Views
             _changeBadgeStyles[FileChangeKind.Deleted] = new GUIStyle(badge) { normal = { textColor = new Color(0.95f, 0.4f, 0.4f) } };
             _changeBadgeStyles[FileChangeKind.Renamed] = new GUIStyle(badge) { normal = { textColor = new Color(0.4f, 0.7f, 0.95f) } };
             _changeBadgeStyles[FileChangeKind.Conflicted] = new GUIStyle(badge) { normal = { textColor = new Color(1f, 0.3f, 0.9f) } };
+
+            _stylesReady = true; // Al final: si algo falla a medias, se reintenta en el siguiente OnGUI.
 
             _logInfoStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel) { richText = false };
             _logSuccessStyle = new GUIStyle(_logInfoStyle) { normal = { textColor = new Color(0.35f, 0.75f, 0.4f) } };
