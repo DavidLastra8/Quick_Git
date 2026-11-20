@@ -12,8 +12,8 @@ namespace UnityGitTool.UseCases
     }
 
     /// <summary>
-    /// Crea el commit. Si el proyecto tiene errores de compilación lo permite (puedes querer guardar
-    /// trabajo a medias en tu rama), pero lo marca para que no pueda subirse a una rama protegida.
+    /// Creates the commit. If the project has compile errors it is still allowed (you may want to save
+    /// work in progress on your branch), but it is marked so it cannot be pushed to a protected branch.
     /// </summary>
     public sealed class CreateCommitUseCase : ICreateCommitUseCase
     {
@@ -28,7 +28,7 @@ namespace UnityGitTool.UseCases
 
         public async Task<OperationResult> ExecuteAsync(CommitMessage message, CancellationToken ct)
         {
-            // Se lee antes de cualquier await: la API de Unity sólo puede usarse en el hilo principal.
+            // Read before any await: the Unity API can only be used on the main thread.
             var hasErrors = _health.HasCompileErrors;
             if (hasErrors) message = message.WithTrailer(CompileErrorMarker.Key, CompileErrorMarker.Value);
 
@@ -36,7 +36,7 @@ namespace UnityGitTool.UseCases
             if (!result.Success || !hasErrors) return result;
 
             return OperationResult.Ok(result.Message +
-                "\nEl proyecto tenía errores de compilación: este commit queda marcado y no podrá subirse a main/master.");
+                "\nThe project had compile errors: this commit is marked and cannot be pushed to main/master.");
         }
     }
 }

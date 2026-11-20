@@ -1,8 +1,8 @@
 namespace UnityGitTool.Core
 {
     /// <summary>
-    /// Resultado inmutable de una operación. Evita usar excepciones para el flujo normal
-    /// (un pull rechazado no es "excepcional", es un resultado esperado).
+    /// Immutable result of an operation. Avoids using exceptions for normal flow
+    /// (a rejected pull is not "exceptional", it is an expected outcome).
     /// </summary>
     public class OperationResult
     {

@@ -4,7 +4,7 @@ using UnityGitTool.Core;
 
 namespace UnityGitTool.GitHub
 {
-    /// <summary>Reglas de GitHub para nombres de repositorio: sólo A-Z, a-z, 0-9, '.', '-' y '_' (máx. 100).</summary>
+    /// <summary>GitHub repository name rules: only A-Z, a-z, 0-9, '.', '-' and '_' (max. 100).</summary>
     public sealed class GitHubRepositoryNameSanitizer : INameSanitizer
     {
         private const int MaxLength = 100;

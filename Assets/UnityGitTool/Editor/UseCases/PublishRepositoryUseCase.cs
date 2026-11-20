@@ -13,9 +13,9 @@ namespace UnityGitTool.UseCases
     }
 
     /// <summary>
-    /// Orquesta "publicar el proyecto": init (si hace falta) → commit inicial → crear repo remoto
-    /// → configurar origin → push. Cada paso lo hace un servicio distinto (SRP); este caso de uso
-    /// sólo coordina, y así el presentador no conoce el orden de los pasos.
+    /// Orchestrates "publish the project": init (if needed) → initial commit → create remote repo
+    /// → configure origin → push. Each step is done by a different service (SRP); this use case
+    /// only coordinates, so the presenter does not need to know the order of the steps.
     /// </summary>
     public sealed class PublishRepositoryUseCase : IPublishRepositoryUseCase
     {
@@ -51,12 +51,12 @@ namespace UnityGitTool.UseCases
             if (!validation.Success) return Fail(validation.Message);
 
             var status = await _inspector.InspectAsync(ct);
-            if (status.State == RepositoryState.GitNotInstalled) return Fail("Git no está instalado o no está en el PATH.");
-            if (status.HasRemote) return Fail($"El repositorio ya tiene un remoto '{RemoteName}': {status.RemoteUrl}");
+            if (status.State == RepositoryState.GitNotInstalled) return Fail("Git is not installed or not in the PATH.");
+            if (status.HasRemote) return Fail($"The repository already has a '{RemoteName}' remote: {status.RemoteUrl}");
 
             if (!status.IsRepository)
             {
-                progress?.Report("Inicializando repositorio local...");
+                progress?.Report("Initializing local repository...");
                 var init = await _initializer.InitializeAsync(ct);
                 if (!init.Success) return Fail(init.Message);
                 status = await _inspector.InspectAsync(ct);
@@ -64,27 +64,27 @@ namespace UnityGitTool.UseCases
 
             if (!status.HasCommits)
             {
-                progress?.Report("Creando commit inicial (puede tardar en proyectos grandes)...");
+                progress?.Report("Creating initial commit (may take a while on big projects)...");
                 var commit = await _commits.CommitAllAsync(new CommitMessage(InitialCommitMessage), ct);
                 if (!commit.Success) return Fail(commit.Message);
             }
 
-            progress?.Report($"Creando repositorio en {_host.DisplayName}...");
+            progress?.Report($"Creating repository on {_host.DisplayName}...");
             var created = await _host.CreateRepositoryAsync(request, ct);
             if (!created.Success) return Fail(created.Message);
 
-            progress?.Report("Configurando remoto...");
+            progress?.Report("Configuring remote...");
             var remote = await _remotes.SetRemoteAsync(RemoteName, created.Value.CloneUrl, ct);
             if (!remote.Success) return Fail(remote.Message);
 
             status = await _inspector.InspectAsync(ct);
 
-            progress?.Report("Subiendo el proyecto (push inicial)...");
+            progress?.Report("Uploading the project (initial push)...");
             var push = await _sync.PushAsync(status.CurrentBranch, setUpstream: true, ct);
             if (!push.Success)
-                return Fail($"El repositorio se creó ({created.Value.WebUrl}) pero el push falló:\n{push.Message}");
+                return Fail($"The repository was created ({created.Value.WebUrl}) but the push failed:\n{push.Message}");
 
-            return OperationResult<RemoteRepository>.Ok(created.Value, $"Proyecto publicado en {created.Value.WebUrl}");
+            return OperationResult<RemoteRepository>.Ok(created.Value, $"Project published at {created.Value.WebUrl}");
         }
 
         private static OperationResult<RemoteRepository> Fail(string message) => OperationResult<RemoteRepository>.Fail(message);

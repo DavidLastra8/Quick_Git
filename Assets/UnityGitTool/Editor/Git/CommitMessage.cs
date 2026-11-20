@@ -5,8 +5,8 @@ using UnityGitTool.Core;
 namespace UnityGitTool.Git
 {
     /// <summary>
-    /// Mensaje de commit: título (primera línea, la que se ve en el historial) y una
-    /// descripción opcional que git guarda como cuerpo del mensaje.
+    /// Commit message: title (first line, the one shown in the history) and an
+    /// optional description that git stores as the message body.
     /// </summary>
     public sealed class CommitMessage
     {
@@ -14,7 +14,7 @@ namespace UnityGitTool.Git
         public string Description { get; }
         public bool HasDescription => Description.Length > 0;
 
-        /// <summary>Líneas "Clave: valor" al final del mensaje (convención de git "trailers").</summary>
+        /// <summary>"Key: value" lines at the end of the message (git "trailers" convention).</summary>
         public IReadOnlyList<string> Trailers { get; }
 
         public CommitMessage(string title, string description = null) : this(title, description, new string[0]) { }
@@ -22,7 +22,7 @@ namespace UnityGitTool.Git
         private CommitMessage(string title, string description, IReadOnlyList<string> trailers)
         {
             Trailers = trailers;
-            // El título es una sola línea: los saltos de línea se convierten en espacios.
+            // The title is a single line: line breaks become spaces.
             Title = (title ?? string.Empty).Replace("\r", " ").Replace("\n", " ").Trim();
             Description = (description ?? string.Empty).Replace("\r\n", "\n").Trim();
         }
@@ -31,6 +31,6 @@ namespace UnityGitTool.Git
             new CommitMessage(Title, Description, Trailers.Concat(new[] { $"{key}: {value}" }).ToList());
 
         public OperationResult Validate() =>
-            Title.Length == 0 ? OperationResult.Fail("El título del commit no puede estar vacío.") : OperationResult.Ok();
+            Title.Length == 0 ? OperationResult.Fail("The commit title cannot be empty.") : OperationResult.Ok();
     }
 }

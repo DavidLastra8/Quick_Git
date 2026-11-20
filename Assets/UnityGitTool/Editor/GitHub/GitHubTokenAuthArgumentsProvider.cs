@@ -7,9 +7,9 @@ using UnityGitTool.Hosting;
 namespace UnityGitTool.GitHub
 {
     /// <summary>
-    /// Inyecta el token como cabecera HTTP sólo para URLs de github.com, sin escribirlo
-    /// nunca en .git/config ni en la URL del remoto. Si no hay token, git usará su
-    /// gestor de credenciales habitual (Git Credential Manager).
+    /// Injects the token as an HTTP header only for github.com URLs, never writing it
+    /// to .git/config or to the remote URL. Without a token, git falls back to its
+    /// usual credential helper (Git Credential Manager).
     /// </summary>
     public sealed class GitHubTokenAuthArgumentsProvider : IGitAuthArgumentsProvider
     {

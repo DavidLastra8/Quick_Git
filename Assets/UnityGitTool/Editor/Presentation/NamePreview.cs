@@ -1,6 +1,6 @@
 namespace UnityGitTool.Presentation
 {
-    /// <summary>Cómo se verá un nombre (repo o rama) en el servicio remoto, ya corregido.</summary>
+    /// <summary>How a name (repo or branch) will look on the remote service, already fixed.</summary>
     public sealed class NamePreview
     {
         public string Heading { get; }

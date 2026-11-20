@@ -1,6 +1,6 @@
 namespace UnityGitTool.Git
 {
-    /// <summary>.gitignore estándar para proyectos de Unity.</summary>
+    /// <summary>Standard .gitignore for Unity projects.</summary>
     public sealed class UnityGitIgnoreTemplate : IGitIgnoreTemplate
     {
         public string Content => @"# --- Unity ---
@@ -14,7 +14,7 @@ namespace UnityGitTool.Git
 /[Mm]emoryCaptures/
 /[Rr]ecordings/
 
-# Los .meta sólo se ignoran si su asset también se ignora
+# .meta files are only ignored when their asset is ignored too
 !/[Aa]ssets/**/*.meta
 
 /[Aa]ssets/Plugins/Editor/JetBrains*
@@ -47,7 +47,7 @@ ExportedObj/
 *.pdb.meta
 *.mdb.meta
 
-# --- Builds y otros ---
+# --- Builds and others ---
 sysinfo.txt
 crashlytics-build.properties
 *.apk

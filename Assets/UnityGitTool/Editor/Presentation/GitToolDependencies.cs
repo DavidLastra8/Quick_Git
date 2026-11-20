@@ -8,8 +8,8 @@ using UnityGitTool.Unity;
 namespace UnityGitTool.Presentation
 {
     /// <summary>
-    /// Agrupa las dependencias del presentador (parameter object). Evita un constructor con
-    /// 15 parámetros y deja claro, en un solo sitio, todo lo que el presentador necesita.
+    /// Groups the presenter's dependencies (parameter object). Avoids a constructor with
+    /// 15 parameters and states, in one place, everything the presenter needs.
     /// </summary>
     public sealed class GitToolDependencies
     {
@@ -30,12 +30,12 @@ namespace UnityGitTool.Presentation
         public INameSanitizer BranchNames { get; set; }
         public INameSanitizer RepositoryNames { get; set; }
 
-        /// <summary>Falla pronto y con un mensaje claro si el composition root olvida algo.</summary>
+        /// <summary>Fails early, with a clear message, if the composition root forgets something.</summary>
         public void Validate()
         {
             foreach (var property in GetType().GetProperties())
                 if (property.GetValue(this) == null)
-                    throw new InvalidOperationException($"GitToolDependencies.{property.Name} no está asignado.");
+                    throw new InvalidOperationException($"GitToolDependencies.{property.Name} is not assigned.");
         }
     }
 }

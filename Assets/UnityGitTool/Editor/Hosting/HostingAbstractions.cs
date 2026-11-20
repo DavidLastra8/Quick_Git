@@ -6,7 +6,7 @@ using UnityGitTool.Core;
 namespace UnityGitTool.Hosting
 {
     /// <summary>
-    /// Servicio de alojamiento remoto (GitHub hoy; GitLab/Bitbucket mañana sin tocar el presentador: OCP + LSP).
+    /// Remote hosting service (GitHub today; GitLab/Bitbucket tomorrow without touching the presenter: OCP + LSP).
     /// </summary>
     public interface IRemoteRepositoryHost
     {
@@ -15,10 +15,10 @@ namespace UnityGitTool.Hosting
         Task<OperationResult<RemoteAccount>> AuthenticateAsync(CancellationToken cancellationToken);
         Task<OperationResult<RemoteRepository>> CreateRepositoryAsync(CreateRepositoryRequest request, CancellationToken cancellationToken);
 
-        /// <summary>URL web que tendrá un repositorio (p. ej. https://github.com/usuario/repo).</summary>
+        /// <summary>Web URL a repository will have (e.g. https://github.com/user/repo).</summary>
         string BuildRepositoryUrl(string owner, string repositoryName);
 
-        /// <summary>URL web de una rama dentro de un repositorio.</summary>
+        /// <summary>Web URL of a branch inside a repository.</summary>
         string BuildBranchUrl(string repositoryWebUrl, string branchName);
     }
 
@@ -67,9 +67,9 @@ namespace UnityGitTool.Hosting
 
         public OperationResult Validate()
         {
-            if (string.IsNullOrEmpty(Name)) return OperationResult.Fail("El nombre del repositorio es obligatorio.");
+            if (string.IsNullOrEmpty(Name)) return OperationResult.Fail("The repository name is required.");
             if (!ValidName.IsMatch(Name) || Name == "." || Name == "..")
-                return OperationResult.Fail("El nombre sólo puede contener letras, números, '.', '-' y '_' (máx. 100).");
+                return OperationResult.Fail("The name can only contain letters, numbers, '.', '-' and '_' (max. 100).");
             return OperationResult.Ok();
         }
     }

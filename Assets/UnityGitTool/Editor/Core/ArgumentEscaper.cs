@@ -5,9 +5,9 @@ using System.Text;
 namespace UnityGitTool.Core
 {
     /// <summary>
-    /// Convierte una lista de argumentos en una única línea de comandos escapada
-    /// (reglas de CommandLineToArgvW, compatibles también con Mono en macOS/Linux).
-    /// Así los mensajes de commit con espacios o comillas llegan intactos a git.
+    /// Turns a list of arguments into a single escaped command line
+    /// (CommandLineToArgvW rules, also compatible with Mono on macOS/Linux).
+    /// This way commit messages with spaces or quotes reach git intact.
     /// </summary>
     public static class ArgumentEscaper
     {

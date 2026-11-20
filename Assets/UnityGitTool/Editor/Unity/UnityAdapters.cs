@@ -13,7 +13,7 @@ namespace UnityGitTool.Unity
 
         public UnityProjectInfo()
         {
-            // Application.dataPath = <proyecto>/Assets → la raíz es su carpeta padre.
+            // Application.dataPath = <project>/Assets → the root is its parent folder.
             RootPath = Directory.GetParent(Application.dataPath).FullName;
             Name = new DirectoryInfo(RootPath).Name;
         }
@@ -51,7 +51,7 @@ namespace UnityGitTool.Unity
 
     public sealed class UnityProjectHealthChecker : IProjectHealthChecker
     {
-        // True si la última compilación de scripts falló (los errores rojos de la Consola).
+        // True if the last script compilation failed (the red errors in the Console).
         public bool HasCompileErrors => EditorUtility.scriptCompilationFailed;
     }
 
@@ -64,9 +64,9 @@ namespace UnityGitTool.Unity
     }
 
     /// <summary>
-    /// Guarda el token en EditorPrefs (por máquina, compartido entre proyectos, fuera del repo).
-    /// Ojo: EditorPrefs no cifra. Para más seguridad, crea otra implementación de IAccessTokenStore
-    /// (p. ej. Keychain / Credential Manager) y cámbiala en GitToolComposer.
+    /// Stores the token in EditorPrefs (per machine, shared across projects, outside the repo).
+    /// Note: EditorPrefs is not encrypted. For more security, write another IAccessTokenStore
+    /// (e.g. Keychain / Credential Manager) and swap it in GitToolComposer.
     /// </summary>
     public sealed class EditorPrefsTokenStore : IAccessTokenStore
     {

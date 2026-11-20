@@ -24,7 +24,7 @@ namespace UnityGitTool.Git
 
         public Task<CommandResult> RunWithAuthAsync(CancellationToken cancellationToken, params string[] arguments)
         {
-            // Las opciones "-c clave=valor" deben ir antes del subcomando.
+            // "-c key=value" options must come before the subcommand.
             var all = new List<string>(_authArguments.GetArguments());
             all.AddRange(arguments);
             return _runner.RunAsync(WorkingDirectory, all, cancellationToken);

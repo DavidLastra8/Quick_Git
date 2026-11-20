@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace UnityGitTool.Git
 {
-    /// <summary>Detecta si el proyecto está en un repositorio y recoge su estado. Sólo lectura.</summary>
+    /// <summary>Detects whether the project is in a repository and collects its state. Read-only.</summary>
     public sealed class GitRepositoryInspector : IGitRepositoryInspector
     {
         private readonly IGitCommandExecutor _git;
@@ -16,7 +16,7 @@ namespace UnityGitTool.Git
             var version = await _git.RunAsync(ct, "--version");
             if (!version.Success) return RepositoryStatus.GitNotInstalled(version.BestMessage);
 
-            // Funciona aunque el proyecto de Unity esté en una subcarpeta del repositorio.
+            // Works even if the Unity project is in a subfolder of the repository.
             var topLevel = await _git.RunAsync(ct, "rev-parse", "--show-toplevel");
             if (!topLevel.Success) return RepositoryStatus.NotARepository(version.Output);
 
@@ -43,8 +43,8 @@ namespace UnityGitTool.Git
             var remote = await _git.RunAsync(ct, "remote", "get-url", "origin");
             status.RemoteUrl = remote.Success ? remote.Output : null;
 
-            // -z: rutas sin comillas ni escapes (soporta espacios y acentos).
-            // --untracked-files=all: lista cada archivo nuevo, no sólo su carpeta.
+            // -z: paths without quoting or escaping (handles spaces and accents).
+            // --untracked-files=all: lists every new file, not just its folder.
             var changes = await _git.RunAsync(ct, "status", "--porcelain=v1", "-z", "--untracked-files=all");
             if (changes.Success) status.Changes = GitStatusParser.Parse(changes.Output);
 
@@ -56,7 +56,7 @@ namespace UnityGitTool.Git
 
         private async Task ReadAheadBehindAsync(RepositoryStatus status, CancellationToken ct)
         {
-            // Salida: "<ahead>\t<behind>". Falla si la rama no tiene upstream.
+            // Output: "<ahead>\t<behind>". Fails if the branch has no upstream.
             var counts = await _git.RunAsync(ct, "rev-list", "--left-right", "--count", "HEAD...@{u}");
             if (!counts.Success) return;
 

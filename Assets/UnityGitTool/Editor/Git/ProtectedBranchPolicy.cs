@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace UnityGitTool.Git
 {
-    /// <summary>Ramas protegidas por nombre (por defecto main y master).</summary>
+    /// <summary>Branches protected by name (main and master by default).</summary>
     public sealed class ProtectedBranchPolicy : IBranchProtectionPolicy
     {
         private readonly HashSet<string> _protected;
@@ -15,7 +15,7 @@ namespace UnityGitTool.Git
                 StringComparer.OrdinalIgnoreCase);
         }
 
-        /// <summary>Recibe el nombre local de la rama (para remotas, GitBranch.LocalName).</summary>
+        /// <summary>Takes the local branch name (for remote branches, GitBranch.LocalName).</summary>
         public bool IsProtected(string branchName) =>
             !string.IsNullOrEmpty(branchName) && _protected.Contains(branchName);
     }

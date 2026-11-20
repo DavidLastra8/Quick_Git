@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace UnityGitTool.Core
 {
     /// <summary>
-    /// Ejecuta un programa externo en un hilo de fondo para no congelar el editor.
-    /// Única responsabilidad: lanzar el proceso y devolver su salida.
+    /// Runs an external program on a background thread so the editor does not freeze.
+    /// Single responsibility: start the process and return its output.
     /// </summary>
     public sealed class ProcessCommandRunner : ICommandRunner
     {
@@ -67,21 +67,21 @@ namespace UnityGitTool.Core
                         cancellationToken.ThrowIfCancellationRequested();
                     }
 
-                    process.WaitForExit(); // Vacía los buffers de lectura asíncrona.
-                    // TrimEnd y no Trim: en "git status" un espacio inicial tiene significado.
+                    process.WaitForExit(); // Flushes the async read buffers.
+                    // TrimEnd, not Trim: in "git status" a leading space is meaningful.
                     return new CommandResult(process.ExitCode, output.ToString().TrimEnd(), error.ToString().Trim());
                 }
             }
             catch (Win32Exception exception)
             {
-                return new CommandResult(-1, string.Empty, $"No se pudo ejecutar '{_executable}': {exception.Message}");
+                return new CommandResult(-1, string.Empty, $"Could not run '{_executable}': {exception.Message}");
             }
         }
 
         private static void TryKill(Process process)
         {
             try { if (!process.HasExited) process.Kill(); }
-            catch (InvalidOperationException) { /* El proceso ya terminó. */ }
+            catch (InvalidOperationException) { /* The process already exited. */ }
         }
     }
 }

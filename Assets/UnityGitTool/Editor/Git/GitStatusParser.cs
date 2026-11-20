@@ -3,9 +3,9 @@ using System.Collections.Generic;
 namespace UnityGitTool.Git
 {
     /// <summary>
-    /// Interpreta la salida de "git status --porcelain=v1 -z".
-    /// Cada entrada es "XY ruta" separada por NUL; en los renombrados le sigue la ruta original.
-    /// X = estado en el stage, Y = estado en la carpeta de trabajo.
+    /// Parses the output of "git status --porcelain=v1 -z".
+    /// Each entry is "XY path" separated by NUL; renames are followed by the original path.
+    /// X = staged state, Y = working tree state.
     /// </summary>
     public static class GitStatusParser
     {

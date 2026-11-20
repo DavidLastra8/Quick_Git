@@ -17,7 +17,7 @@ namespace UnityGitTool.Git
                 ? await _git.RunAsync(ct, "remote", "set-url", name, url)
                 : await _git.RunAsync(ct, "remote", "add", name, url);
 
-            return GitOutput.ToResult(result, $"Remoto '{name}' → {url}", $"No se pudo configurar el remoto '{name}'");
+            return GitOutput.ToResult(result, $"Remote '{name}' → {url}", $"Could not configure remote '{name}'");
         }
     }
 }

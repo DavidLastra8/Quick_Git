@@ -11,15 +11,15 @@ using UnityGitTool.Presentation;
 namespace UnityGitTool.Views
 {
     /// <summary>
-    /// Vista pasiva (MVP): dibuja el estado recibido y convierte clics en eventos.
-    /// No llama a git ni a GitHub, no toma decisiones.
+    /// Passive view (MVP): draws the state it receives and turns clicks into events.
+    /// It never calls git or GitHub and makes no decisions.
     /// </summary>
     public sealed class GitToolWindow : EditorWindow, IGitToolView
     {
         private const int MaxLogEntries = 200;
         private const int MaxVisibleChanges = 500;
         private const int MaxChangeRowsBeforeScroll = 12;
-        private static readonly string[] PullStrategyLabels = { "Solo fast-forward (seguro)", "Merge", "Rebase" };
+        private static readonly string[] PullStrategyLabels = { "Fast-forward only (safe)", "Merge", "Rebase" };
 
         public event Action RefreshRequested;
         public event Action BackgroundRefreshRequested;
@@ -53,7 +53,7 @@ namespace UnityGitTool.Views
         private string _busyMessage;
         private string[] _branchLabels = Array.Empty<string>();
 
-        // Entradas del usuario: se serializan para sobrevivir a recompilaciones.
+        // User input: serialized so it survives recompiles.
         [SerializeField] private List<LogEntry> _log = new List<LogEntry>();
         [SerializeField] private string _commitTitle = string.Empty;
         [SerializeField] private string _commitDescription = string.Empty;
@@ -68,14 +68,14 @@ namespace UnityGitTool.Views
         [SerializeField] private bool _accountFoldout = true;
         [SerializeField] private bool _settingsFoldout;
         [SerializeField] private int _deleteBranchIndex;
-        private string _tokenInput = string.Empty; // Nunca se serializa.
+        private string _tokenInput = string.Empty; // Never serialized.
         private string _gitExecutableInput;
 
         private Vector2 _scroll;
         private Vector2 _changesScroll;
         private Vector2 _logScroll;
-        // [NonSerialized]: al recompilar, Unity conserva los campos privados de la ventana. Sin esto,
-        // los estilos de la versión anterior sobreviven y los nuevos se quedan a null.
+        // [NonSerialized]: on recompile Unity keeps the window's private fields. Without this,
+        // the styles from the previous version survive and the new ones stay null.
         [NonSerialized] private bool _stylesReady;
         [NonSerialized] private GUIStyle _logInfoStyle, _logSuccessStyle, _logWarningStyle, _logErrorStyle;
         [NonSerialized] private GUIStyle _placeholderStyle, _changePathStyle;
@@ -89,7 +89,7 @@ namespace UnityGitTool.Views
             window.minSize = new Vector2(380, 460);
         }
 
-        // ---------------------------------------------------------------- Ciclo de vida
+        // ---------------------------------------------------------------- Lifecycle
 
         private void OnEnable()
         {
@@ -97,8 +97,8 @@ namespace UnityGitTool.Views
             _presenter = GitToolComposer.Compose(this);
             _presenter.Initialize();
 
-            // Tras recompilar, los textos escritos sobreviven: se los pasamos al presentador
-            // para que la vista previa refleje lo que hay en los campos.
+            // After a recompile the typed text survives: hand it to the presenter
+            // so the preview matches what is in the fields.
             if (_repositoryNameInitialized) RepositoryNameEdited?.Invoke(_repositoryName);
             if (!string.IsNullOrEmpty(_newBranchName)) BranchNameEdited?.Invoke(_newBranchName);
         }
@@ -117,7 +117,7 @@ namespace UnityGitTool.Views
         {
             _state = state ?? GitToolViewState.Empty;
 
-            // Sólo la primera vez: si el usuario borra el campo, no se vuelve a rellenar solo.
+            // Only the first time: if the user clears the field, it is not refilled.
             if (!_repositoryNameInitialized && !string.IsNullOrEmpty(_state.DefaultRepositoryName))
             {
                 _repositoryName = _state.DefaultRepositoryName;
@@ -147,12 +147,12 @@ namespace UnityGitTool.Views
         }
 
         public bool Confirm(string title, string message) =>
-            EditorUtility.DisplayDialog(title, message, "Continuar", "Cancelar");
+            EditorUtility.DisplayDialog(title, message, "Continue", "Cancel");
 
         public DialogChoice Choose(string title, string message, string primary, string alternative)
         {
-            // DisplayDialogComplex devuelve 0 = ok, 1 = cancel, 2 = alt.
-            switch (EditorUtility.DisplayDialogComplex(title, message, primary, "Cancelar", alternative))
+            // DisplayDialogComplex returns 0 = ok, 1 = cancel, 2 = alt.
+            switch (EditorUtility.DisplayDialogComplex(title, message, primary, "Cancel", alternative))
             {
                 case 0: return DialogChoice.Primary;
                 case 2: return DialogChoice.Alternative;
@@ -164,7 +164,7 @@ namespace UnityGitTool.Views
         {
             _commitTitle = string.Empty;
             _commitDescription = string.Empty;
-            GUIUtility.keyboardControl = 0; // Si no, el TextArea con foco conserva el texto viejo.
+            GUIUtility.keyboardControl = 0; // Otherwise the focused TextArea keeps the old text.
             Repaint();
         }
 
@@ -187,7 +187,7 @@ namespace UnityGitTool.Views
             Repaint();
         }
 
-        // ---------------------------------------------------------------- Dibujo
+        // ---------------------------------------------------------------- Drawing
 
         private void OnGUI()
         {
@@ -200,7 +200,7 @@ namespace UnityGitTool.Views
                 switch (_state.Status.State)
                 {
                     case RepositoryState.Unknown:
-                        EditorGUILayout.HelpBox("Analizando el proyecto...", MessageType.None);
+                        EditorGUILayout.HelpBox("Analyzing the project...", MessageType.None);
                         break;
                     case RepositoryState.GitNotInstalled:
                         DrawGitNotInstalled();
@@ -233,7 +233,7 @@ namespace UnityGitTool.Views
 
                 using (new EditorGUI.DisabledScope(_isBusy))
                 {
-                    if (GUILayout.Button("Refrescar", EditorStyles.toolbarButton))
+                    if (GUILayout.Button("Refresh", EditorStyles.toolbarButton))
                         RefreshRequested?.Invoke();
                 }
             }
@@ -242,10 +242,10 @@ namespace UnityGitTool.Views
         private void DrawGitNotInstalled()
         {
             EditorGUILayout.HelpBox(
-                "No se encuentra git. Instálalo y reinicia Unity, o indica la ruta del ejecutable en Configuración.\n\n" +
+                "Git was not found. Install it and restart Unity, or set the executable path in Settings.\n\n" +
                 _state.Status.ErrorMessage, MessageType.Error);
 
-            if (GUILayout.Button("Descargar Git"))
+            if (GUILayout.Button("Download Git"))
                 Application.OpenURL("https://git-scm.com/downloads");
 
             _settingsFoldout = true;
@@ -253,11 +253,11 @@ namespace UnityGitTool.Views
 
         private void DrawNoRepository()
         {
-            EditorGUILayout.HelpBox("Este proyecto no está dentro de ningún repositorio Git.", MessageType.Warning);
-            DrawPublishForm("Crear repositorio y publicar");
+            EditorGUILayout.HelpBox("This project is not inside any Git repository.", MessageType.Warning);
+            DrawPublishForm("Create repository and publish");
 
             EditorGUILayout.Space(4);
-            if (GUILayout.Button("Solo inicializar repositorio local (sin GitHub)"))
+            if (GUILayout.Button("Only initialize a local repository (no GitHub)"))
                 InitializeRepositoryRequested?.Invoke();
         }
 
@@ -267,21 +267,21 @@ namespace UnityGitTool.Views
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Repositorio", status.RootPath);
-                EditorGUILayout.LabelField("Rama actual", status.CurrentBranchLabel);
-                EditorGUILayout.LabelField("Remoto", status.HasRemote ? status.RemoteUrl : "(sin remoto)");
-                EditorGUILayout.LabelField("Cambios locales", status.ChangedFiles.ToString());
-                EditorGUILayout.LabelField("Sincronización",
-                    status.HasUpstream ? $"↑ {status.Ahead} por subir   ↓ {status.Behind} por bajar" : "Rama sin upstream");
+                EditorGUILayout.LabelField("Repository", status.RootPath);
+                EditorGUILayout.LabelField("Current branch", status.CurrentBranchLabel);
+                EditorGUILayout.LabelField("Remote", status.HasRemote ? status.RemoteUrl : "(no remote)");
+                EditorGUILayout.LabelField("Local changes", status.ChangedFiles.ToString());
+                EditorGUILayout.LabelField("Sync",
+                    status.HasUpstream ? $"↑ {status.Ahead} to push   ↓ {status.Behind} to pull" : "Branch has no upstream");
 
-                if (status.HasRemote && GUILayout.Button("Abrir en el navegador"))
+                if (status.HasRemote && GUILayout.Button("Open in browser"))
                     OpenRemoteRequested?.Invoke();
             }
 
             if (!status.HasRemote)
             {
-                EditorGUILayout.HelpBox("El repositorio local no está vinculado a ningún remoto.", MessageType.Info);
-                DrawPublishForm("Publicar en " + _state.HostName);
+                EditorGUILayout.HelpBox("The local repository is not linked to any remote.", MessageType.Info);
+                DrawPublishForm("Publish to " + _state.HostName);
             }
 
             DrawSync(status);
@@ -293,25 +293,25 @@ namespace UnityGitTool.Views
         private void DrawPublishForm(string buttonLabel)
         {
             EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField($"Nuevo repositorio en {_state.HostName}", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"New repository on {_state.HostName}", EditorStyles.boldLabel);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                var editedName = LiveTextField("Nombre", _repositoryName);
+                var editedName = LiveTextField("Name", _repositoryName);
                 if (editedName != _repositoryName)
                 {
                     _repositoryName = editedName;
                     _repositoryNameInitialized = true;
-                    RepositoryNameEdited?.Invoke(editedName); // El presentador lo corrige si hace falta.
+                    RepositoryNameEdited?.Invoke(editedName); // The presenter fixes it if needed.
                 }
 
                 DrawNamePreview(_state.RepositoryPreview);
 
-                _repositoryDescription = EditorGUILayout.TextField("Descripción", _repositoryDescription);
-                _repositoryPrivate = EditorGUILayout.Toggle("Privado", _repositoryPrivate);
+                _repositoryDescription = EditorGUILayout.TextField("Description", _repositoryDescription);
+                _repositoryPrivate = EditorGUILayout.Toggle("Private", _repositoryPrivate);
 
                 if (!_state.HasToken)
-                    EditorGUILayout.HelpBox("Primero añade un token en la sección Cuenta.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Add a token in the Account section first.", MessageType.Info);
 
                 using (new EditorGUI.DisabledScope(!_state.HasToken))
                 {
@@ -325,11 +325,11 @@ namespace UnityGitTool.Views
         private void DrawSync(RepositoryStatus status)
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Sincronizar", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Sync", EditorStyles.boldLabel);
 
             using (new EditorGUI.DisabledScope(!status.HasRemote))
             {
-                _pullStrategy = (PullStrategy)EditorGUILayout.Popup("Estrategia de pull", (int)_pullStrategy, PullStrategyLabels);
+                _pullStrategy = (PullStrategy)EditorGUILayout.Popup("Pull strategy", (int)_pullStrategy, PullStrategyLabels);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -350,27 +350,27 @@ namespace UnityGitTool.Views
             if (_state.PushBlockedReason != null)
                 EditorGUILayout.HelpBox("🔒 " + _state.PushBlockedReason, MessageType.Error);
             else if (_state.IsCurrentBranchProtected)
-                EditorGUILayout.HelpBox($"'{status.CurrentBranch}' es una rama protegida: no admite push con errores de compilación.", MessageType.None);
+                EditorGUILayout.HelpBox($"'{status.CurrentBranch}' is a protected branch: pushes with compile errors are not allowed.", MessageType.None);
         }
 
         private void DrawChanges(RepositoryStatus status)
         {
             EditorGUILayout.Space(6);
-            _changesFoldout = EditorGUILayout.Foldout(_changesFoldout, $"Archivos cambiados ({status.ChangedFiles})", true, EditorStyles.foldoutHeader);
+            _changesFoldout = EditorGUILayout.Foldout(_changesFoldout, $"Changed files ({status.ChangedFiles})", true, EditorStyles.foldoutHeader);
             if (!_changesFoldout) return;
 
             if (status.ChangedFiles == 0)
             {
-                EditorGUILayout.HelpBox("No hay cambios desde el último commit.", MessageType.None);
+                EditorGUILayout.HelpBox("No changes since the last commit.", MessageType.None);
                 return;
             }
 
             var metaCount = status.Changes.Count(c => c.IsMetaFile);
-            _hideMetaFiles = EditorGUILayout.ToggleLeft($"Ocultar archivos .meta ({metaCount})", _hideMetaFiles);
+            _hideMetaFiles = EditorGUILayout.ToggleLeft($"Hide .meta files ({metaCount})", _hideMetaFiles);
 
             var visible = status.Changes.Where(c => !_hideMetaFiles || !c.IsMetaFile).ToList();
 
-            // Altura calculada con la altura real de fila: hasta 12 filas visibles, el resto con scroll.
+            // Height based on the real row height: up to 12 visible rows, the rest scrolls.
             var rowHeight = EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
             var rows = Mathf.Clamp(visible.Count, 1, MaxChangeRowsBeforeScroll);
             var height = rows * rowHeight + 10f;
@@ -388,13 +388,13 @@ namespace UnityGitTool.Views
             }
 
             if (visible.Count > MaxVisibleChanges)
-                GUILayout.Label($"... y {visible.Count - MaxVisibleChanges} más", _placeholderStyle);
+                GUILayout.Label($"... and {visible.Count - MaxVisibleChanges} more", _placeholderStyle);
             EditorGUILayout.EndScrollView();
 
             var hiddenMeta = _hideMetaFiles ? metaCount : 0;
-            var summary = $"Mostrando {Math.Min(visible.Count, MaxVisibleChanges)} de {status.ChangedFiles}";
-            if (hiddenMeta > 0) summary += $" ({hiddenMeta} .meta ocultos)";
-            if (visible.Count > MaxChangeRowsBeforeScroll) summary += " · desplázate para ver el resto";
+            var summary = $"Showing {Math.Min(visible.Count, MaxVisibleChanges)} of {status.ChangedFiles}";
+            if (hiddenMeta > 0) summary += $" ({hiddenMeta} .meta hidden)";
+            if (visible.Count > MaxChangeRowsBeforeScroll) summary += " · scroll to see the rest";
             GUILayout.Label(summary, _placeholderStyle);
         }
 
@@ -405,17 +405,17 @@ namespace UnityGitTool.Views
 
             if (_state.HasCompileErrors)
                 EditorGUILayout.HelpBox(
-                    "El proyecto tiene errores de compilación. Puedes hacer commit, pero quedará marcado " +
-                    "y no se podrá subir a main/master (sí a otras ramas).", MessageType.Warning);
+                    "The project has compile errors. You can commit, but the commit will be marked " +
+                    "and cannot be pushed to main/master (other branches are fine).", MessageType.Warning);
 
-            _commitTitle = PlaceholderField(EditorGUILayout.TextField(_commitTitle), "Título (resumen corto del cambio)");
+            _commitTitle = PlaceholderField(EditorGUILayout.TextField(_commitTitle), "Title (short summary of the change)");
 
             _commitDescription = EditorGUILayout.TextArea(_commitDescription, GUILayout.MinHeight(54));
-            DrawPlaceholder(_commitDescription, "Descripción (opcional): qué has cambiado y por qué");
+            DrawPlaceholder(_commitDescription, "Description (optional): what you changed and why");
 
             using (new EditorGUI.DisabledScope(status.ChangedFiles == 0 || string.IsNullOrWhiteSpace(_commitTitle)))
             {
-                if (GUILayout.Button($"Commit de {status.ChangedFiles} cambio(s)"))
+                if (GUILayout.Button($"Commit {status.ChangedFiles} change(s)"))
                     CommitRequested?.Invoke(new CommitMessage(_commitTitle, _commitDescription));
             }
         }
@@ -423,18 +423,18 @@ namespace UnityGitTool.Views
         private void DrawBranches()
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Ramas", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Branches", EditorStyles.boldLabel);
 
             if (_branchLabels.Length == 0)
             {
-                EditorGUILayout.HelpBox("Aún no hay ramas (haz el primer commit).", MessageType.None);
+                EditorGUILayout.HelpBox("No branches yet (make the first commit).", MessageType.None);
             }
             else
             {
-                // El desplegable siempre muestra la rama actual. Elegir otra hace el checkout al momento;
-                // si falla o se cancela, el siguiente Render vuelve a mostrar la rama en la que estás.
+                // The dropdown always shows the current branch. Picking another one checks it out right away;
+                // if that fails or is cancelled, the next Render shows the branch you are on again.
                 var currentIndex = _state.Branches.ToList().FindIndex(b => b.IsCurrent);
-                var selectedIndex = EditorGUILayout.Popup("Rama actual", currentIndex, _branchLabels);
+                var selectedIndex = EditorGUILayout.Popup("Current branch", currentIndex, _branchLabels);
 
                 if (selectedIndex != currentIndex && selectedIndex >= 0)
                     CheckoutRequested?.Invoke(_state.Branches[selectedIndex]);
@@ -442,16 +442,16 @@ namespace UnityGitTool.Views
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                var editedName = LiveTextField("Nueva rama", _newBranchName);
+                var editedName = LiveTextField("New branch", _newBranchName);
                 if (editedName != _newBranchName)
                 {
                     _newBranchName = editedName;
-                    BranchNameEdited?.Invoke(editedName); // El presentador cambia espacios, etc.
+                    BranchNameEdited?.Invoke(editedName); // The presenter replaces spaces, etc.
                 }
 
                 using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_newBranchName)))
                 {
-                    if (GUILayout.Button("Crear", GUILayout.Width(80)))
+                    if (GUILayout.Button("Create", GUILayout.Width(80)))
                         CreateBranchRequested?.Invoke(_newBranchName);
                 }
             }
@@ -468,39 +468,39 @@ namespace UnityGitTool.Views
             {
                 if (deletable.Count == 0)
                 {
-                    EditorGUILayout.LabelField("Borrar rama", "(no hay ramas que se puedan borrar)", _placeholderStyle);
+                    EditorGUILayout.LabelField("Delete branch", "(no branches can be deleted)", _placeholderStyle);
                     return;
                 }
 
                 _deleteBranchIndex = Mathf.Clamp(_deleteBranchIndex, 0, deletable.Count - 1);
-                _deleteBranchIndex = EditorGUILayout.Popup("Borrar rama", _deleteBranchIndex, deletable.Select(ToLabel).ToArray());
+                _deleteBranchIndex = EditorGUILayout.Popup("Delete branch", _deleteBranchIndex, deletable.Select(ToLabel).ToArray());
 
-                if (GUILayout.Button("Borrar", GUILayout.Width(80)))
+                if (GUILayout.Button("Delete", GUILayout.Width(80)))
                     DeleteBranchRequested?.Invoke(deletable[_deleteBranchIndex]);
             }
 
-            EditorGUILayout.LabelField("main y master están protegidas: no se pueden borrar desde aquí.", _placeholderStyle);
+            EditorGUILayout.LabelField("main and master are protected: they cannot be deleted from here.", _placeholderStyle);
         }
 
         private void DrawAccount()
         {
-            _accountFoldout = EditorGUILayout.Foldout(_accountFoldout, $"Cuenta de {_state.HostName}", true);
+            _accountFoldout = EditorGUILayout.Foldout(_accountFoldout, $"{_state.HostName} account", true);
             if (!_accountFoldout) return;
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 if (_state.IsAuthenticated)
-                    EditorGUILayout.LabelField("Conectado como", _state.AccountName, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Connected as", _state.AccountName, EditorStyles.boldLabel);
                 else if (_state.HasToken)
-                    EditorGUILayout.HelpBox("Hay un token guardado pero no se ha podido verificar.", MessageType.Warning);
+                    EditorGUILayout.HelpBox("A token is saved but it could not be verified.", MessageType.Warning);
 
-                _tokenInput = EditorGUILayout.PasswordField("Token personal", _tokenInput);
+                _tokenInput = EditorGUILayout.PasswordField("Personal token", _tokenInput);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_tokenInput)))
                     {
-                        if (GUILayout.Button("Guardar token"))
+                        if (GUILayout.Button("Save token"))
                         {
                             SaveTokenRequested?.Invoke(_tokenInput);
                             _tokenInput = string.Empty;
@@ -510,39 +510,39 @@ namespace UnityGitTool.Views
 
                     using (new EditorGUI.DisabledScope(!_state.HasToken))
                     {
-                        if (GUILayout.Button("Eliminar token"))
+                        if (GUILayout.Button("Remove token"))
                             ClearTokenRequested?.Invoke();
                     }
                 }
 
                 if (!string.IsNullOrEmpty(_state.TokenCreationUrl) &&
-                    GUILayout.Button("Crear un token (scope 'repo') →", EditorStyles.linkLabel))
+                    GUILayout.Button("Create a token ('repo' scope) →", EditorStyles.linkLabel))
                     Application.OpenURL(_state.TokenCreationUrl);
 
                 EditorGUILayout.HelpBox(
-                    "El token se guarda en EditorPrefs de este equipo (sin cifrar), nunca dentro del proyecto. " +
-                    "Se usa para crear repositorios y para autenticar pull/push por HTTPS.", MessageType.None);
+                    "The token is stored in this machine's EditorPrefs (unencrypted), never inside the project. " +
+                    "It is used to create repositories and to authenticate pull/push over HTTPS.", MessageType.None);
             }
         }
 
         private void DrawSettings()
         {
-            _settingsFoldout = EditorGUILayout.Foldout(_settingsFoldout, "Configuración", true);
+            _settingsFoldout = EditorGUILayout.Foldout(_settingsFoldout, "Settings", true);
             if (!_settingsFoldout) return;
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                _gitExecutableInput = EditorGUILayout.TextField("Ejecutable de git", _gitExecutableInput);
+                _gitExecutableInput = EditorGUILayout.TextField("Git executable", _gitExecutableInput);
                 EditorGUILayout.HelpBox(
-                    "Normalmente 'git'. En macOS, si Unity no hereda el PATH, usa p. ej. /opt/homebrew/bin/git.",
+                    "Usually 'git'. On macOS, if Unity does not inherit your PATH, use e.g. /opt/homebrew/bin/git.",
                     MessageType.None);
 
-                if (GUILayout.Button("Aplicar"))
+                if (GUILayout.Button("Apply"))
                 {
                     EditorPrefs.SetString(GitToolComposer.GitExecutablePrefKey,
                         string.IsNullOrWhiteSpace(_gitExecutableInput) ? "git" : _gitExecutableInput.Trim());
 
-                    // Recompone el grafo de dependencias con el nuevo ejecutable.
+                    // Rebuilds the dependency graph with the new executable.
                     OnDisable();
                     OnEnable();
                 }
@@ -556,7 +556,7 @@ namespace UnityGitTool.Views
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
                 GUILayout.Label("⏳ " + _busyMessage, EditorStyles.wordWrappedLabel);
-                if (GUILayout.Button("Cancelar", GUILayout.Width(80)))
+                if (GUILayout.Button("Cancel", GUILayout.Width(80)))
                     CancelRequested?.Invoke();
             }
         }
@@ -565,8 +565,8 @@ namespace UnityGitTool.Views
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Registro", EditorStyles.boldLabel);
-                if (GUILayout.Button("Limpiar", EditorStyles.miniButton, GUILayout.Width(60)))
+                EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
+                if (GUILayout.Button("Clear", EditorStyles.miniButton, GUILayout.Width(60)))
                     _log.Clear();
             }
 
@@ -576,21 +576,21 @@ namespace UnityGitTool.Views
             EditorGUILayout.EndScrollView();
         }
 
-        // ---------------------------------------------------------------- Utilidades
+        // ---------------------------------------------------------------- Helpers
 
         private static string ToLabel(GitBranch branch)
         {
-            // "/" en un Popup crea submenús: Local/feature/x, Remoto/origin/main...
-            var prefix = branch.IsRemote ? "Remoto/" : "Local/";
+            // "/" in a Popup creates submenus: Local/feature/x, Remote/origin/main...
+            var prefix = branch.IsRemote ? "Remote/" : "Local/";
             var suffix = branch.IsCurrent ? "   ✓" : string.Empty;
-            if (!branch.IsRemote && branch.ExistsOnRemote) suffix += "   (también en remoto)";
+            if (!branch.IsRemote && branch.ExistsOnRemote) suffix += "   (also on remote)";
             return prefix + branch.Name + suffix;
         }
 
         /// <summary>
-        /// Campo de texto que refleja al instante los cambios hechos desde código (corrección en vivo).
-        /// Se usa GUILayout.TextField porque EditorGUILayout.TextField conserva su propio buffer
-        /// mientras tiene el foco y no mostraría el texto corregido hasta perderlo.
+        /// Text field that instantly reflects changes made from code (live fixing).
+        /// GUILayout.TextField is used because EditorGUILayout.TextField keeps its own buffer
+        /// while focused and would not show the fixed text until focus is lost.
         /// </summary>
         private static string LiveTextField(string label, string value)
         {
@@ -615,7 +615,7 @@ namespace UnityGitTool.Views
             GUI.Label(rect, placeholder, _placeholderStyle);
         }
 
-        /// <summary>Recuadro bajo un campo de nombre con cómo quedará en GitHub (lo calcula el presentador).</summary>
+        /// <summary>Box under a name field showing how it will look on GitHub (computed by the presenter).</summary>
         private static void DrawNamePreview(NamePreview preview)
         {
             if (preview == null) return;
@@ -631,7 +631,7 @@ namespace UnityGitTool.Views
                 EditorGUILayout.LabelField(preview.Heading, EditorStyles.miniLabel);
                 EditorGUILayout.LabelField(preview.DisplayName, EditorStyles.boldLabel);
 
-                // Seleccionable para poder copiar la URL.
+                // Selectable so the URL can be copied.
                 if (!string.IsNullOrEmpty(preview.Url))
                     EditorGUILayout.SelectableLabel(preview.Url, EditorStyles.miniLabel, GUILayout.Height(EditorGUIUtility.singleLineHeight));
 
@@ -644,12 +644,12 @@ namespace UnityGitTool.Views
         {
             switch (kind)
             {
-                case FileChangeKind.Added: return "Añadido";
-                case FileChangeKind.Deleted: return "Eliminado";
-                case FileChangeKind.Renamed: return "Renombrado";
-                case FileChangeKind.Untracked: return "Nuevo (sin seguimiento)";
-                case FileChangeKind.Conflicted: return "En conflicto";
-                default: return "Modificado";
+                case FileChangeKind.Added: return "Added";
+                case FileChangeKind.Deleted: return "Deleted";
+                case FileChangeKind.Renamed: return "Renamed";
+                case FileChangeKind.Untracked: return "Untracked (new)";
+                case FileChangeKind.Conflicted: return "Conflicted";
+                default: return "Modified";
             }
         }
 
@@ -660,7 +660,7 @@ namespace UnityGitTool.Views
                 case FileChangeKind.Added: return "A";
                 case FileChangeKind.Deleted: return "D";
                 case FileChangeKind.Renamed: return "R";
-                case FileChangeKind.Untracked: return "N";
+                case FileChangeKind.Untracked: return "U";
                 case FileChangeKind.Conflicted: return "!";
                 default: return "M";
             }
@@ -683,7 +683,7 @@ namespace UnityGitTool.Views
             _changeBadgeStyles[FileChangeKind.Renamed] = new GUIStyle(badge) { normal = { textColor = new Color(0.4f, 0.7f, 0.95f) } };
             _changeBadgeStyles[FileChangeKind.Conflicted] = new GUIStyle(badge) { normal = { textColor = new Color(1f, 0.3f, 0.9f) } };
 
-            _stylesReady = true; // Al final: si algo falla a medias, se reintenta en el siguiente OnGUI.
+            _stylesReady = true; // Last: if something fails halfway, it is retried on the next OnGUI.
 
             _logInfoStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel) { richText = false };
             _logSuccessStyle = new GUIStyle(_logInfoStyle) { normal = { textColor = new Color(0.35f, 0.75f, 0.4f) } };

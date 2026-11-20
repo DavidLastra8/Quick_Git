@@ -5,19 +5,19 @@ using UnityGitTool.Core;
 
 namespace UnityGitTool.Git
 {
-    // Interfaces pequeñas y específicas (ISP): cada cliente depende sólo de lo que usa.
+    // Small, specific interfaces (ISP): each client depends only on what it uses.
 
-    /// <summary>Ejecuta comandos git en el directorio del proyecto.</summary>
+    /// <summary>Runs git commands in the project directory.</summary>
     public interface IGitCommandExecutor
     {
         string WorkingDirectory { get; }
         Task<CommandResult> RunAsync(CancellationToken cancellationToken, params string[] arguments);
 
-        /// <summary>Igual que RunAsync, pero añade credenciales para operaciones de red (fetch/pull/push).</summary>
+        /// <summary>Same as RunAsync, but adds credentials for network operations (fetch/pull/push).</summary>
         Task<CommandResult> RunWithAuthAsync(CancellationToken cancellationToken, params string[] arguments);
     }
 
-    /// <summary>Aporta argumentos "-c ..." de autenticación. Abierto a extensión (OCP): GitHub, GitLab, ninguno...</summary>
+    /// <summary>Provides "-c ..." authentication arguments. Open for extension (OCP): GitHub, GitLab, none...</summary>
     public interface IGitAuthArgumentsProvider
     {
         IEnumerable<string> GetArguments();
@@ -39,20 +39,20 @@ namespace UnityGitTool.Git
         Task<OperationResult> CheckoutAsync(GitBranch branch, CancellationToken cancellationToken);
         Task<OperationResult> CreateBranchAsync(string name, CancellationToken cancellationToken);
 
-        /// <summary>True si todos los commits de la rama están ya en "target" (p. ej. "HEAD" u "origin/x").</summary>
+        /// <summary>True if every commit of the branch is already in "target" (e.g. "HEAD" or "origin/x").</summary>
         Task<bool> IsMergedIntoAsync(GitBranch branch, string target, CancellationToken cancellationToken);
 
         Task<OperationResult> DeleteLocalBranchAsync(GitBranch branch, CancellationToken cancellationToken);
         Task<OperationResult> DeleteRemoteBranchAsync(GitBranch branch, CancellationToken cancellationToken);
     }
 
-    /// <summary>Lectura del historial (sólo lectura, separado de quien escribe commits).</summary>
+    /// <summary>History reader (read-only, separate from whoever writes commits).</summary>
     public interface IGitCommitReader
     {
         Task<OperationResult<string>> GetFullMessageAsync(string revision, CancellationToken cancellationToken);
     }
 
-    /// <summary>Decide qué ramas están protegidas (no se borran y no aceptan push con errores).</summary>
+    /// <summary>Decides which branches are protected (cannot be deleted and reject pushes with errors).</summary>
     public interface IBranchProtectionPolicy
     {
         bool IsProtected(string branchName);

@@ -5,7 +5,7 @@ using UnityGitTool.Core;
 
 namespace UnityGitTool.Git
 {
-    /// <summary>Utilidades de parseo y formateo de la salida de git (compartidas por los servicios).</summary>
+    /// <summary>Parsing and formatting helpers for git output (shared by the services).</summary>
     internal static class GitOutput
     {
         public static IEnumerable<string> Lines(string text) =>

@@ -4,7 +4,7 @@ using UnityGitTool.Git;
 
 namespace UnityGitTool.Presentation
 {
-    /// <summary>Todo lo que la vista necesita para pintarse, preparado por el presentador.</summary>
+    /// <summary>Everything the view needs to draw itself, prepared by the presenter.</summary>
     public sealed class GitToolViewState
     {
         public static readonly GitToolViewState Empty = new GitToolViewState();
@@ -14,11 +14,11 @@ namespace UnityGitTool.Presentation
         public IReadOnlyList<GitBranch> DeletableBranches { get; set; } = Array.Empty<GitBranch>();
         public bool IsCurrentBranchProtected { get; set; }
 
-        /// <summary>Motivo por el que no se puede hacer push ahora mismo, o null si sí se puede.</summary>
+        /// <summary>Reason why pushing is not possible right now, or null if it is.</summary>
         public string PushBlockedReason { get; set; }
         public bool HasCompileErrors { get; set; }
 
-        /// <summary>Vista previa del repositorio a crear y de la rama a crear (null = no mostrar nada).</summary>
+        /// <summary>Preview of the repository and branch to create (null = show nothing).</summary>
         public NamePreview RepositoryPreview { get; set; }
         public NamePreview BranchPreview { get; set; }
         public bool HasToken { get; set; }

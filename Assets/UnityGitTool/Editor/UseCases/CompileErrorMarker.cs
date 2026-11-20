@@ -4,8 +4,8 @@ using System.Linq;
 namespace UnityGitTool.UseCases
 {
     /// <summary>
-    /// Marca que se añade al mensaje de los commits hechos con errores de compilación.
-    /// Queda visible en GitHub y permite saber, al hacer push, si el último commit estaba roto.
+    /// Marker added to the message of commits made with compile errors.
+    /// It is visible on GitHub and tells us, when pushing, whether the last commit was broken.
     /// </summary>
     public static class CompileErrorMarker
     {

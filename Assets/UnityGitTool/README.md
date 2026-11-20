@@ -1,74 +1,90 @@
 # Unity Git Tool
 
-Ventana de editor para trabajar con Git y GitHub sin salir de Unity.
-Menú: **Tools → Git Tool**.
+An editor window to work with Git and GitHub without leaving Unity.
+Menu: **Tools → Git Tool**.
 
-## Instalación en otro proyecto
+## Features
+- Detects whether the project is inside a git repository (also from a subfolder) and whether git is installed.
+- **Publish to GitHub** in one click: init + Unity `.gitignore` + initial commit + create the repository + push.
+- **Fetch / Pull / Push**, with fast-forward, merge or rebase pull strategies.
+- **Commits** with a title and an optional description.
+- **Changed files** list showing the change type (M/U/A/D/R/!), with an option to hide `.meta` files.
+- **Branches**: switch instantly from the dropdown, create and delete them (locally and on GitHub).
+- **Names fixed while typing** (spaces, accents, forbidden characters), with a preview of how the repository or branch will look on GitHub.
+- **Protected branches** (`main`/`master`): pushing is blocked if the project has compile errors or the last commit was made with errors. Other branches are not affected.
 
-### Opción A: Package Manager (recomendada)
-1. En Unity: **Window → Package Manager**.
-2. Botón **+** → **Add package from git URL...**
-3. Pega:
+## Installation
+
+### Option A: Package Manager (recommended)
+1. In Unity: **Window → Package Manager**.
+2. **+** button → **Add package from git URL...**
+3. Paste:
    ```
    https://github.com/DavidLastra8/Test_Tool.git?path=/Assets/UnityGitTool#v1.0.0
    ```
-   - `?path=` indica la carpeta del paquete dentro del repositorio.
-   - `#v1.0.0` fija la versión. Si lo quitas, se instala lo último de `main`.
+   - `?path=` tells Unity which folder of the repository contains the package.
+   - `#v1.0.0` pins the version. Without it you get the latest commit on `main`.
 
-También puedes añadirlo a mano en `Packages/manifest.json`:
+Or add it by hand to `Packages/manifest.json`:
 ```json
 "com.davidlastra8.unity-git-tool": "https://github.com/DavidLastra8/Test_Tool.git?path=/Assets/UnityGitTool#v1.0.0"
 ```
 
-> Si el repositorio es **privado**, Unity usa tu git para descargarlo, así que git necesita
-> credenciales de GitHub. Con Git for Windows, el Git Credential Manager abre el navegador la
-> primera vez para iniciar sesión. Si no te lo pide o falla, haz el repositorio público o
-> clónalo una vez desde la terminal para que se guarden las credenciales.
+> If the repository is **private**, Unity downloads it with your own git, so git needs GitHub
+> credentials. With Git for Windows, Git Credential Manager opens the browser to sign in the
+> first time. If that fails, make the repository public or clone it once from a terminal so the
+> credentials are stored.
 
-### Opción B: .unitypackage
-En este proyecto: clic derecho sobre `Assets/UnityGitTool` → **Export Package...** → Export.
-En el otro proyecto: **Assets → Import Package → Custom Package...**
-Es más simple, pero las actualizaciones hay que reimportarlas a mano.
+### Option B: .unitypackage
+In the source project, right-click `Assets/UnityGitTool` → **Export Package...** → Export.
+In the other project: **Assets → Import Package → Custom Package...**
+Simpler, but updates have to be re-imported by hand.
 
-> Usa una sola de las dos opciones en cada proyecto. Si el paquete está instalado y además
-> hay una copia en `Assets`, Unity dará un error de assembly duplicado.
+> Use only one option per project. Having the package installed **and** a copy in `Assets`
+> causes a duplicate assembly error.
 
-## Publicar una versión nueva
-1. Cambia `"version"` en `package.json` (por ejemplo, `1.1.0`) y anota los cambios en `CHANGELOG.md`.
-2. Haz commit y push.
-3. Crea la etiqueta y súbela:
-   ```
-   git tag v1.1.0
-   git push origin v1.1.0
-   ```
-4. En los otros proyectos, cambia `#v1.0.0` por `#v1.1.0` en `Packages/manifest.json`.
+## Requirements
+- Unity 2021.3 or newer.
+- Git installed (https://git-scm.com). If Unity cannot find it, set the path under **Settings** in the window.
+- Your git identity configured:
+  `git config --global user.name "..."` and `git config --global user.email "..."`.
+- A GitHub personal access token (**Account** section of the window). A classic token with the `repo` scope works.
+  It is stored in this machine's EditorPrefs, so it is shared by all your projects and never saved inside a project.
 
-## Funciones
-- Detecta si el proyecto está en un repositorio git (también desde una subcarpeta) y si git está instalado.
-- **Publicar en GitHub**: init + `.gitignore` de Unity + commit inicial + crear el repo + push.
-- **Fetch / Pull / Push**. Pull en modo fast-forward, merge o rebase.
-- **Commit** con título y descripción.
-- **Archivos cambiados**: lista con el tipo de cambio (M/N/A/D/R/!) y un filtro para ocultar los `.meta`.
-- **Ramas**: cambiar al instante desde el desplegable, crear y borrar (en local y en GitHub).
-- **Nombres corregidos en vivo** (espacios, acentos, caracteres prohibidos) con una vista previa de cómo se verán en GitHub.
-- **Ramas protegidas** (`main`/`master`): no se puede hacer push si hay errores de compilación o si el último commit se hizo con errores.
+## Releasing a new version
+1. Make and test your changes in the source project.
+2. Pick the new version number ([Semantic Versioning](https://semver.org/)):
+   - `1.0.0 → 1.0.1` bug fixes only,
+   - `1.0.1 → 1.1.0` new features that break nothing,
+   - `1.4.2 → 2.0.0` changes that require users to adapt.
+3. Update `"version"` in `package.json` and add an entry at the top of `CHANGELOG.md`.
+4. Commit and push.
+5. On GitHub: **Releases → Draft a new release**, create the tag `vX.Y.Z` on `main` and publish it.
+6. In each project using the package, change `#v1.0.0` to `#vX.Y.Z` in `Packages/manifest.json`.
+   To roll back, put the old tag back.
 
-## Requisitos
-- Git instalado (https://git-scm.com). Si Unity no lo encuentra, indica la ruta en *Configuración*.
-- Tu identidad configurada en git:
-  `git config --global user.name "..."` y `git config --global user.email "..."`.
-- Un token de GitHub (sección *Cuenta*): un token clásico con el scope `repo`.
-  Se guarda en EditorPrefs de tu equipo, así que sirve para todos tus proyectos.
-
-## Arquitectura (MVP + SOLID)
+## Architecture (MVP + SOLID)
 ```
-Views/        GitToolWindow                  Vista pasiva (EditorWindow)
+Views/        GitToolWindow                  Passive view (EditorWindow)
 Presentation/ GitToolPresenter, IGitToolView, GitToolViewState, GitToolDependencies, NamePreview
 UseCases/     PublishRepository, CreateCommit, PushGuard
-Git/          Servicios sobre la CLI de git, sanitizador de ramas, política de ramas protegidas
-Hosting/      Abstracciones del servicio remoto (IRemoteRepositoryHost...)
-GitHub/       Implementación para GitHub (API REST, autenticación, nombres de repo)
-Unity/        Adaptadores de AssetDatabase, EditorPrefs y del estado de compilación
-Core/         Ejecución de procesos, OperationResult, INameSanitizer
-Composition/  GitToolComposer: el único sitio que crea las clases concretas
+Git/          Services over the git CLI, branch name sanitizer, protected branch policy
+Hosting/      Remote hosting abstractions (IRemoteRepositoryHost...)
+GitHub/       GitHub implementation (REST API, authentication, repository names)
+Unity/        Adapters for AssetDatabase, EditorPrefs and compilation state
+Core/         Process execution, OperationResult, INameSanitizer
+Composition/  GitToolComposer: the only place that creates concrete classes
 ```
+- **S**: every service has a single job (detect, branches, sync, commit...).
+- **O**: supporting GitLab means implementing `IRemoteRepositoryHost` and `IGitAuthArgumentsProvider`, without touching the presenter.
+- **L**: any implementation of an interface can replace another one (test doubles included).
+- **I**: small interfaces (`IGitSyncService`, `IGitBranchService`...) instead of one huge `IGitService`.
+- **D**: the presenter only depends on interfaces, never on `UnityEditor` or `Process`, so it can be unit tested.
+
+## Notes
+- The token is never written to `.git/config` or to the remote URL. It is sent as an HTTP header to github.com only.
+  Without a token, git uses your Git Credential Manager. SSH remotes use your SSH keys.
+- Merge conflicts after a pull must be resolved with your usual tool. The window shows the conflicted files (`!`).
+- GitHub rejects files larger than 100 MB. Use Git LFS for large assets (not managed by this tool).
+- The protected branch check only applies to pushes made from this window. For real enforcement, enable
+  GitHub branch protection together with a CI build.

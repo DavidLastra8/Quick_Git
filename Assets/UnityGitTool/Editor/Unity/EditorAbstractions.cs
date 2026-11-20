@@ -1,7 +1,7 @@
 namespace UnityGitTool.Unity
 {
-    // Abstracciones de la API de Unity: el presentador no depende de UnityEditor (DIP),
-    // lo que permite testearlo con dobles en un EditMode test o fuera de Unity.
+    // Abstractions over the Unity API: the presenter does not depend on UnityEditor (DIP),
+    // so it can be tested with doubles in an EditMode test or outside Unity.
 
     public interface IProjectInfo
     {
@@ -11,16 +11,16 @@ namespace UnityGitTool.Unity
 
     public interface IEditorAssetSynchronizer
     {
-        /// <summary>Guarda escenas/assets. Devuelve false si el usuario cancela.</summary>
+        /// <summary>Saves scenes/assets. Returns false if the user cancels.</summary>
         bool SaveOpenWork();
 
-        /// <summary>Evita que Unity reimporte mientras git está modificando archivos.</summary>
+        /// <summary>Stops Unity from reimporting while git is changing files.</summary>
         void SuspendAutoRefresh();
 
         void ResumeAutoRefresh(bool refreshNow);
     }
 
-    /// <summary>Estado de "salud" del proyecto. Hoy: errores de compilación; ampliable (tests, etc.).</summary>
+    /// <summary>Project "health" state. Today: compile errors; can be extended (tests, etc.).</summary>
     public interface IProjectHealthChecker
     {
         bool HasCompileErrors { get; }

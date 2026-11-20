@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 namespace UnityGitTool.Core
 {
     /// <summary>
-    /// Abstracción para ejecutar un programa externo. Permite sustituir el proceso real
-    /// por un doble de prueba (DIP) sin tocar los servicios de Git.
+    /// Abstraction to run an external program. Lets the real process be replaced
+    /// by a test double (DIP) without touching the Git services.
     /// </summary>
     public interface ICommandRunner
     {

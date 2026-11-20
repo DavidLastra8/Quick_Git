@@ -28,7 +28,7 @@ namespace UnityGitTool.Git
         Conflicted
     }
 
-    /// <summary>Un archivo con cambios respecto al último commit.</summary>
+    /// <summary>A file with changes since the last commit.</summary>
     public sealed class GitFileChange
     {
         public string Path { get; }
@@ -44,7 +44,7 @@ namespace UnityGitTool.Git
         }
     }
 
-    /// <summary>Instantánea del estado del repositorio (parte del Modelo en MVP).</summary>
+    /// <summary>Snapshot of the repository state (part of the Model in MVP).</summary>
     public sealed class RepositoryStatus
     {
         public static readonly RepositoryStatus Unknown = new RepositoryStatus { State = RepositoryState.Unknown };
@@ -65,7 +65,7 @@ namespace UnityGitTool.Git
         public bool IsRepository => State == RepositoryState.Ready;
         public int ChangedFiles => Changes.Count;
         public bool HasRemote => !string.IsNullOrEmpty(RemoteUrl);
-        public string CurrentBranchLabel => IsDetachedHead ? $"(HEAD separado en {CurrentBranch})" : CurrentBranch;
+        public string CurrentBranchLabel => IsDetachedHead ? $"(detached HEAD at {CurrentBranch})" : CurrentBranch;
 
         public static RepositoryStatus GitNotInstalled(string error) =>
             new RepositoryStatus { State = RepositoryState.GitNotInstalled, ErrorMessage = error };
@@ -80,11 +80,11 @@ namespace UnityGitTool.Git
         public bool IsRemote { get; }
         public bool IsCurrent { get; }
 
-        /// <summary>Rama equivalente en el remoto ("origin/feature"), o null si no existe allí.</summary>
+        /// <summary>Matching branch on the remote ("origin/feature"), or null if it does not exist there.</summary>
         public string RemoteBranchName { get; }
         public bool ExistsOnRemote => RemoteBranchName != null;
 
-        /// <summary>Nombre que tendrá la rama en local ("origin/feature/x" → "feature/x").</summary>
+        /// <summary>Name the branch has locally ("origin/feature/x" → "feature/x").</summary>
         public string LocalName => IsRemote ? Name.Substring(Name.IndexOf('/') + 1) : Name;
 
         public GitBranch(string name, bool isRemote, bool isCurrent, string remoteBranchName = null)

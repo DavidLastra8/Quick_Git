@@ -12,7 +12,7 @@ using UnityGitTool.Hosting;
 
 namespace UnityGitTool.GitHub
 {
-    /// <summary>Implementación de IRemoteRepositoryHost sobre la API REST de GitHub.</summary>
+    /// <summary>IRemoteRepositoryHost implementation on top of the GitHub REST API.</summary>
     public sealed class GitHubRepositoryHost : IRemoteRepositoryHost
     {
         private const string ApiBase = "https://api.github.com";
@@ -29,12 +29,12 @@ namespace UnityGitTool.GitHub
             $"https://github.com/{owner}/{repositoryName}";
 
         public string BuildBranchUrl(string repositoryWebUrl, string branchName) =>
-            // Cada tramo de la rama se escapa, pero las "/" se mantienen (así lo muestra GitHub).
+            // Each branch segment is escaped, but "/" is kept (that is how GitHub shows it).
             $"{repositoryWebUrl?.TrimEnd('/')}/tree/{string.Join("/", branchName.Split('/').Select(Uri.EscapeDataString))}";
 
         public async Task<OperationResult<RemoteAccount>> AuthenticateAsync(CancellationToken ct)
         {
-            if (!_tokens.HasToken) return OperationResult<RemoteAccount>.Fail("No hay ningún token de GitHub configurado.");
+            if (!_tokens.HasToken) return OperationResult<RemoteAccount>.Fail("No GitHub token is configured.");
 
             using (var request = CreateRequest(HttpMethod.Get, "/user"))
             using (var response = await Http.SendAsync(request, ct))
@@ -44,7 +44,7 @@ namespace UnityGitTool.GitHub
                     return OperationResult<RemoteAccount>.Fail(DescribeError(response.StatusCode, body));
 
                 var user = JsonUtility.FromJson<GitHubUserDto>(body);
-                return OperationResult<RemoteAccount>.Ok(new RemoteAccount(user.login), $"Conectado a GitHub como {user.login}.");
+                return OperationResult<RemoteAccount>.Ok(new RemoteAccount(user.login), $"Connected to GitHub as {user.login}.");
             }
         }
 
@@ -52,14 +52,14 @@ namespace UnityGitTool.GitHub
         {
             var validation = repository.Validate();
             if (!validation.Success) return OperationResult<RemoteRepository>.Fail(validation.Message);
-            if (!_tokens.HasToken) return OperationResult<RemoteRepository>.Fail("No hay ningún token de GitHub configurado.");
+            if (!_tokens.HasToken) return OperationResult<RemoteRepository>.Fail("No GitHub token is configured.");
 
             var payload = JsonUtility.ToJson(new GitHubCreateRepositoryBody
             {
                 name = repository.Name,
                 description = repository.Description,
                 @private = repository.IsPrivate,
-                auto_init = false // El contenido lo sube el push inicial desde el proyecto.
+                auto_init = false // The content is uploaded by the initial push from the project.
             });
 
             using (var request = CreateRequest(HttpMethod.Post, "/user/repos"))
@@ -75,7 +75,7 @@ namespace UnityGitTool.GitHub
                     var dto = JsonUtility.FromJson<GitHubRepositoryDto>(body);
                     return OperationResult<RemoteRepository>.Ok(
                         new RemoteRepository(dto.full_name, dto.clone_url, dto.html_url),
-                        $"Repositorio '{dto.full_name}' creado en GitHub.");
+                        $"Repository '{dto.full_name}' created on GitHub.");
                 }
             }
         }
@@ -91,8 +91,8 @@ namespace UnityGitTool.GitHub
         {
             switch ((int)status)
             {
-                case 401: return "GitHub rechazó el token (inválido o caducado).";
-                case 403: return "El token no tiene permisos suficientes (necesita el scope 'repo').";
+                case 401: return "GitHub rejected the token (invalid or expired).";
+                case 403: return "The token does not have enough permissions (it needs the 'repo' scope).";
             }
 
             try
@@ -102,9 +102,9 @@ namespace UnityGitTool.GitHub
                 if (details != null && details.Length > 0) return $"GitHub: {string.Join("; ", details)}";
                 if (!string.IsNullOrEmpty(error.message)) return $"GitHub: {error.message}";
             }
-            catch (ArgumentException) { /* Cuerpo no JSON */ }
+            catch (ArgumentException) { /* Body is not JSON */ }
 
-            return $"GitHub respondió con el código {(int)status}.";
+            return $"GitHub responded with status code {(int)status}.";
         }
 
         private static HttpClient CreateHttpClient()

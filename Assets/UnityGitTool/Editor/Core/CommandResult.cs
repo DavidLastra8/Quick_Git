@@ -1,6 +1,6 @@
 namespace UnityGitTool.Core
 {
-    /// <summary>Salida cruda de un proceso externo.</summary>
+    /// <summary>Raw output of an external process.</summary>
     public readonly struct CommandResult
     {
         public int ExitCode { get; }
@@ -15,7 +15,7 @@ namespace UnityGitTool.Core
             Error = error ?? string.Empty;
         }
 
-        /// <summary>Texto más útil para mostrar: git escribe muchos mensajes informativos en stderr.</summary>
+        /// <summary>Most useful text to show: git writes many informational messages to stderr.</summary>
         public string BestMessage => string.IsNullOrWhiteSpace(Error) ? Output : Error;
     }
 }

@@ -8,14 +8,14 @@ namespace UnityGitTool.UseCases
 {
     public interface IPushGuard
     {
-        /// <summary>Ok si se puede hacer push de la rama actual; Fail con el motivo si no.</summary>
+        /// <summary>Ok if the current branch can be pushed; Fail with the reason otherwise.</summary>
         Task<OperationResult> CheckAsync(RepositoryStatus status, CancellationToken cancellationToken);
     }
 
     /// <summary>
-    /// Regla: a una rama protegida (main/master) no se sube nada con errores de compilación,
-    /// ni si el proyecto los tiene ahora, ni si el último commit se hizo con errores.
-    /// En el resto de ramas, el push siempre está permitido.
+    /// Rule: nothing with compile errors is pushed to a protected branch (main/master),
+    /// neither if the project has them now nor if the last commit was made with errors.
+    /// On every other branch, pushing is always allowed.
     /// </summary>
     public sealed class PushGuard : IPushGuard
     {
@@ -37,16 +37,16 @@ namespace UnityGitTool.UseCases
 
             if (_health.HasCompileErrors)
                 return OperationResult.Fail(
-                    $"El proyecto tiene errores de compilación: no se puede hacer push a '{branch}'. " +
-                    "Corrígelos, o crea otra rama y súbelos allí.");
+                    $"The project has compile errors: you cannot push to '{branch}'. " +
+                    "Fix them, or create another branch and push there.");
 
             if (!status.HasCommits) return OperationResult.Ok();
 
             var head = await _commits.GetFullMessageAsync("HEAD", ct);
             if (head.Success && CompileErrorMarker.IsPresentIn(head.Value))
                 return OperationResult.Fail(
-                    $"El último commit se hizo con errores de compilación: no se puede hacer push a '{branch}'. " +
-                    "Haz un commit nuevo con los errores corregidos, o súbelo a otra rama.");
+                    $"The last commit was made with compile errors: you cannot push to '{branch}'. " +
+                    "Make a new commit with the errors fixed, or push it to another branch.");
 
             return OperationResult.Ok();
         }

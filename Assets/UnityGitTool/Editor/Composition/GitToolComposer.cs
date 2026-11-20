@@ -10,8 +10,8 @@ using UnityGitTool.Unity;
 namespace UnityGitTool.Composition
 {
     /// <summary>
-    /// Composition root: el ÚNICO sitio que conoce las clases concretas. Para cambiar GitHub por
-    /// GitLab, o EditorPrefs por un almacén cifrado, sólo se toca este archivo.
+    /// Composition root: the ONLY place that knows the concrete classes. To swap GitHub for
+    /// GitLab, or EditorPrefs for an encrypted store, only this file changes.
     /// </summary>
     public static class GitToolComposer
     {
@@ -23,8 +23,8 @@ namespace UnityGitTool.Composition
             var project = new UnityProjectInfo();
             var tokens = new EditorPrefsTokenStore(TokenPrefKey);
 
-            // GIT_TERMINAL_PROMPT=0: si faltan credenciales git falla en lugar de quedarse
-            // esperando una contraseña en una consola invisible.
+            // GIT_TERMINAL_PROMPT=0: if credentials are missing git fails instead of waiting
+            // for a password in an invisible console.
             var runner = new ProcessCommandRunner(
                 EditorPrefs.GetString(GitExecutablePrefKey, "git"),
                 new Dictionary<string, string> { { "GIT_TERMINAL_PROMPT", "0" } });

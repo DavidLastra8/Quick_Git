@@ -2,7 +2,7 @@ using System;
 
 namespace UnityGitTool.GitHub
 {
-    // DTOs para JsonUtility: campos públicos con los mismos nombres que la API de GitHub.
+    // DTOs for JsonUtility: public fields named exactly like the GitHub API.
 #pragma warning disable 0649, IDE1006
     [Serializable]
     internal sealed class GitHubCreateRepositoryBody

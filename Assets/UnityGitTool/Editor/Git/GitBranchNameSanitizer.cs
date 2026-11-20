@@ -6,9 +6,9 @@ using UnityGitTool.Core;
 namespace UnityGitTool.Git
 {
     /// <summary>
-    /// Reglas de nombres de rama de git (git check-ref-format):
-    /// sin espacios ni ~ ^ : ? * [ \, sin "..", "@{" ni "//", sin empezar por "-" o ".",
-    /// sin terminar en "/", "." o ".lock".
+    /// Git branch name rules (git check-ref-format):
+    /// no spaces or ~ ^ : ? * [ \, no "..", "@{" or "//", must not start with "-" or ".",
+    /// must not end with "/", "." or ".lock".
     /// </summary>
     public sealed class GitBranchNameSanitizer : INameSanitizer
     {
@@ -37,7 +37,7 @@ namespace UnityGitTool.Git
             text = Regex.Replace(text, "/{2,}", "/");
             text = text.Replace("@{", "@-");
 
-            // Cada tramo entre "/" no puede empezar por "." ni terminar en "." o ".lock".
+            // Each segment between "/" cannot start with "." or end with "." or ".lock".
             var segments = text.Split('/')
                 .Select(SanitizeSegment)
                 .Where(s => s.Length > 0);

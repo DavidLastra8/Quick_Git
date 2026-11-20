@@ -20,14 +20,14 @@ namespace UnityGitTool.Presentation
     }
 
     /// <summary>
-    /// Contrato de la Vista pasiva: sólo emite intenciones del usuario (eventos) y pinta lo que
-    /// el presentador le da. No contiene lógica ni conoce git/GitHub.
+    /// Passive View contract: it only raises user intentions (events) and draws what the
+    /// presenter gives it. It holds no logic and knows nothing about git/GitHub.
     /// </summary>
     public interface IGitToolView
     {
         event Action RefreshRequested;
 
-        /// <summary>Refresco silencioso (p. ej. al enfocar la ventana). No debe bloquear la UI.</summary>
+        /// <summary>Silent refresh (e.g. when the window gets focus). Must not block the UI.</summary>
         event Action BackgroundRefreshRequested;
 
         event Action CancelRequested;
@@ -39,10 +39,10 @@ namespace UnityGitTool.Presentation
         event Action<string> CreateBranchRequested;
         event Action<GitBranch> DeleteBranchRequested;
 
-        /// <summary>El usuario ha editado el nombre de la nueva rama (para corregirlo en vivo).</summary>
+        /// <summary>The user edited the new branch name (to fix it live).</summary>
         event Action<string> BranchNameEdited;
 
-        /// <summary>El usuario ha editado el nombre del repositorio (para corregirlo en vivo).</summary>
+        /// <summary>The user edited the repository name (to fix it live).</summary>
         event Action<string> RepositoryNameEdited;
         event Action InitializeRepositoryRequested;
         event Action<CreateRepositoryRequest> PublishRepositoryRequested;
@@ -55,7 +55,7 @@ namespace UnityGitTool.Presentation
         void AppendLog(string message, LogSeverity severity);
         bool Confirm(string title, string message);
 
-        /// <summary>Diálogo con dos opciones además de Cancelar.</summary>
+        /// <summary>Dialog with two options besides Cancel.</summary>
         DialogChoice Choose(string title, string message, string primary, string alternative);
         void ClearCommitMessage();
         void ClearNewBranchName();
