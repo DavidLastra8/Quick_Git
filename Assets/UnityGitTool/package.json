@@ -1,0 +1,18 @@
+{
+  "name": "com.davidlastra8.unity-git-tool",
+  "version": "1.0.0",
+  "displayName": "Unity Git Tool",
+  "description": "Ventana de editor para trabajar con Git y GitHub sin salir de Unity: detectar y publicar repositorios, commit con descripción, lista de cambios, fetch/pull/push, crear, cambiar y borrar ramas, y bloqueo de push a main con errores de compilación. Arquitectura MVP + SOLID.",
+  "unity": "2021.3",
+  "author": {
+    "name": "DavidLastra8",
+    "url": "https://github.com/DavidLastra8"
+  },
+  "keywords": [
+    "git",
+    "github",
+    "version control",
+    "editor",
+    "tool"
+  ]
+}
