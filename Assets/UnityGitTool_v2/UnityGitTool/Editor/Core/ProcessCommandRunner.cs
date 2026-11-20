@@ -68,7 +68,8 @@ namespace UnityGitTool.Core
                     }
 
                     process.WaitForExit(); // Vacía los buffers de lectura asíncrona.
-                    return new CommandResult(process.ExitCode, output.ToString().Trim(), error.ToString().Trim());
+                    // TrimEnd y no Trim: en "git status" un espacio inicial tiene significado.
+                    return new CommandResult(process.ExitCode, output.ToString().TrimEnd(), error.ToString().Trim());
                 }
             }
             catch (Win32Exception exception)

@@ -47,7 +47,6 @@ namespace UnityGitTool.Hosting
     public sealed class CreateRepositoryRequest
     {
         private static readonly Regex ValidName = new Regex(@"^[A-Za-z0-9._-]{1,100}$");
-        private static readonly Regex InvalidChars = new Regex(@"[^A-Za-z0-9._-]+");
 
         public string Name { get; }
         public string Description { get; }
@@ -67,9 +66,5 @@ namespace UnityGitTool.Hosting
                 return OperationResult.Fail("El nombre sólo puede contener letras, números, '.', '-' y '_' (máx. 100).");
             return OperationResult.Ok();
         }
-
-        /// <summary>"My Cool Game" → "My-Cool-Game".</summary>
-        public static string SanitizeName(string raw) =>
-            InvalidChars.Replace(raw ?? string.Empty, "-").Trim('-');
     }
 }

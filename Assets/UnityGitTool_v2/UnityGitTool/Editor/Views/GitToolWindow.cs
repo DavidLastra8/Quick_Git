@@ -17,6 +17,7 @@ namespace UnityGitTool.Views
     public sealed class GitToolWindow : EditorWindow, IGitToolView
     {
         private const int MaxLogEntries = 200;
+        private const int MaxVisibleChanges = 300;
         private static readonly string[] PullStrategyLabels = { "Solo fast-forward (seguro)", "Merge", "Rebase" };
 
         public event Action RefreshRequested;
@@ -25,9 +26,11 @@ namespace UnityGitTool.Views
         public event Action FetchRequested;
         public event Action<PullStrategy> PullRequested;
         public event Action PushRequested;
-        public event Action<string> CommitRequested;
+        public event Action<CommitMessage> CommitRequested;
         public event Action<GitBranch> CheckoutRequested;
         public event Action<string> CreateBranchRequested;
+        public event Action<string> BranchNameEdited;
+        public event Action<string> RepositoryNameEdited;
         public event Action InitializeRepositoryRequested;
         public event Action<CreateRepositoryRequest> PublishRepositoryRequested;
         public event Action<string> SaveTokenRequested;
@@ -50,21 +53,26 @@ namespace UnityGitTool.Views
 
         // Entradas del usuario: se serializan para sobrevivir a recompilaciones.
         [SerializeField] private List<LogEntry> _log = new List<LogEntry>();
-        [SerializeField] private string _commitMessage = string.Empty;
+        [SerializeField] private string _commitTitle = string.Empty;
+        [SerializeField] private string _commitDescription = string.Empty;
+        [SerializeField] private bool _changesFoldout = true;
+        [SerializeField] private bool _hideMetaFiles = true;
         [SerializeField] private string _newBranchName = string.Empty;
         [SerializeField] private string _repositoryName = string.Empty;
         [SerializeField] private string _repositoryDescription = string.Empty;
         [SerializeField] private bool _repositoryPrivate = true;
         [SerializeField] private PullStrategy _pullStrategy = PullStrategy.FastForwardOnly;
-        [SerializeField] private int _selectedBranchIndex;
         [SerializeField] private bool _accountFoldout = true;
         [SerializeField] private bool _settingsFoldout;
         private string _tokenInput = string.Empty; // Nunca se serializa.
         private string _gitExecutableInput;
 
         private Vector2 _scroll;
+        private Vector2 _changesScroll;
         private Vector2 _logScroll;
         private GUIStyle _logInfoStyle, _logSuccessStyle, _logWarningStyle, _logErrorStyle;
+        private GUIStyle _placeholderStyle, _changePathStyle;
+        private readonly Dictionary<FileChangeKind, GUIStyle> _changeBadgeStyles = new Dictionary<FileChangeKind, GUIStyle>();
 
         [MenuItem("Tools/Git Tool")]
         public static void Open()
@@ -102,10 +110,6 @@ namespace UnityGitTool.Views
 
             _branchLabels = _state.Branches.Select(ToLabel).ToArray();
 
-            var current = _state.Branches.ToList().FindIndex(b => b.IsCurrent);
-            if (_selectedBranchIndex < 0 || _selectedBranchIndex >= _branchLabels.Length)
-                _selectedBranchIndex = Math.Max(0, current);
-
             Repaint();
         }
 
@@ -131,7 +135,8 @@ namespace UnityGitTool.Views
 
         public void ClearCommitMessage()
         {
-            _commitMessage = string.Empty;
+            _commitTitle = string.Empty;
+            _commitDescription = string.Empty;
             GUIUtility.keyboardControl = 0; // Si no, el TextArea con foco conserva el texto viejo.
             Repaint();
         }
@@ -140,6 +145,18 @@ namespace UnityGitTool.Views
         {
             _newBranchName = string.Empty;
             GUIUtility.keyboardControl = 0;
+            Repaint();
+        }
+
+        public void ShowBranchName(string name)
+        {
+            _newBranchName = name ?? string.Empty;
+            Repaint();
+        }
+
+        public void ShowRepositoryName(string name)
+        {
+            _repositoryName = name ?? string.Empty;
             Repaint();
         }
 
@@ -241,6 +258,7 @@ namespace UnityGitTool.Views
             }
 
             DrawSync(status);
+            DrawChanges(status);
             DrawCommit(status);
             DrawBranches();
         }
@@ -252,7 +270,12 @@ namespace UnityGitTool.Views
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                _repositoryName = EditorGUILayout.TextField("Nombre", _repositoryName);
+                var editedName = LiveTextField("Nombre", _repositoryName);
+                if (editedName != _repositoryName)
+                {
+                    _repositoryName = editedName;
+                    RepositoryNameEdited?.Invoke(editedName); // El presentador lo corrige si hace falta.
+                }
                 _repositoryDescription = EditorGUILayout.TextField("Descripción", _repositoryDescription);
                 _repositoryPrivate = EditorGUILayout.Toggle("Privado", _repositoryPrivate);
 
@@ -291,17 +314,54 @@ namespace UnityGitTool.Views
             }
         }
 
+        private void DrawChanges(RepositoryStatus status)
+        {
+            EditorGUILayout.Space(6);
+            _changesFoldout = EditorGUILayout.Foldout(_changesFoldout, $"Archivos cambiados ({status.ChangedFiles})", true, EditorStyles.foldoutHeader);
+            if (!_changesFoldout) return;
+
+            if (status.ChangedFiles == 0)
+            {
+                EditorGUILayout.HelpBox("No hay cambios desde el último commit.", MessageType.None);
+                return;
+            }
+
+            var metaCount = status.Changes.Count(c => c.IsMetaFile);
+            _hideMetaFiles = EditorGUILayout.ToggleLeft($"Ocultar archivos .meta ({metaCount})", _hideMetaFiles);
+
+            var visible = status.Changes.Where(c => !_hideMetaFiles || !c.IsMetaFile).ToList();
+            var height = Mathf.Clamp(visible.Count * 18f + 8f, 30f, 180f);
+
+            _changesScroll = EditorGUILayout.BeginScrollView(_changesScroll, EditorStyles.helpBox, GUILayout.Height(height));
+            foreach (var change in visible.Take(MaxVisibleChanges))
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.Label(BadgeFor(change.Kind), _changeBadgeStyles[change.Kind], GUILayout.Width(18));
+                    var path = change.OldPath != null ? $"{change.OldPath} → {change.Path}" : change.Path;
+                    GUILayout.Label(new GUIContent(path, path), _changePathStyle);
+                }
+            }
+
+            if (visible.Count > MaxVisibleChanges)
+                GUILayout.Label($"... y {visible.Count - MaxVisibleChanges} más", _placeholderStyle);
+            EditorGUILayout.EndScrollView();
+        }
+
         private void DrawCommit(RepositoryStatus status)
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField($"Commit ({status.ChangedFiles} cambios)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Commit", EditorStyles.boldLabel);
 
-            _commitMessage = EditorGUILayout.TextArea(_commitMessage, GUILayout.MinHeight(38));
+            _commitTitle = PlaceholderField(EditorGUILayout.TextField(_commitTitle), "Título (resumen corto del cambio)");
 
-            using (new EditorGUI.DisabledScope(status.ChangedFiles == 0 || string.IsNullOrWhiteSpace(_commitMessage)))
+            _commitDescription = EditorGUILayout.TextArea(_commitDescription, GUILayout.MinHeight(54));
+            DrawPlaceholder(_commitDescription, "Descripción (opcional): qué has cambiado y por qué");
+
+            using (new EditorGUI.DisabledScope(status.ChangedFiles == 0 || string.IsNullOrWhiteSpace(_commitTitle)))
             {
-                if (GUILayout.Button("Commit de todos los cambios"))
-                    CommitRequested?.Invoke(_commitMessage);
+                if (GUILayout.Button($"Commit de {status.ChangedFiles} cambio(s)"))
+                    CommitRequested?.Invoke(new CommitMessage(_commitTitle, _commitDescription));
             }
         }
 
@@ -316,22 +376,23 @@ namespace UnityGitTool.Views
             }
             else
             {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    _selectedBranchIndex = EditorGUILayout.Popup(_selectedBranchIndex, _branchLabels);
-                    var selected = _state.Branches[_selectedBranchIndex];
+                // El desplegable siempre muestra la rama actual. Elegir otra hace el checkout al momento;
+                // si falla o se cancela, el siguiente Render vuelve a mostrar la rama en la que estás.
+                var currentIndex = _state.Branches.ToList().FindIndex(b => b.IsCurrent);
+                var selectedIndex = EditorGUILayout.Popup("Rama actual", currentIndex, _branchLabels);
 
-                    using (new EditorGUI.DisabledScope(selected.IsCurrent))
-                    {
-                        if (GUILayout.Button("Checkout", GUILayout.Width(80)))
-                            CheckoutRequested?.Invoke(selected);
-                    }
-                }
+                if (selectedIndex != currentIndex && selectedIndex >= 0)
+                    CheckoutRequested?.Invoke(_state.Branches[selectedIndex]);
             }
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                _newBranchName = EditorGUILayout.TextField("Nueva rama", _newBranchName);
+                var editedName = LiveTextField("Nueva rama", _newBranchName);
+                if (editedName != _newBranchName)
+                {
+                    _newBranchName = editedName;
+                    BranchNameEdited?.Invoke(editedName); // El presentador cambia espacios, etc.
+                }
 
                 using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_newBranchName)))
                 {
@@ -444,9 +505,61 @@ namespace UnityGitTool.Views
             return prefix + branch.Name + (branch.IsCurrent ? "   ✓" : string.Empty);
         }
 
+        /// <summary>
+        /// Campo de texto que refleja al instante los cambios hechos desde código (corrección en vivo).
+        /// Se usa GUILayout.TextField porque EditorGUILayout.TextField conserva su propio buffer
+        /// mientras tiene el foco y no mostraría el texto corregido hasta perderlo.
+        /// </summary>
+        private static string LiveTextField(string label, string value)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.PrefixLabel(label);
+                return GUILayout.TextField(value ?? string.Empty, EditorStyles.textField);
+            }
+        }
+
+        private string PlaceholderField(string value, string placeholder)
+        {
+            DrawPlaceholder(value, placeholder);
+            return value;
+        }
+
+        private void DrawPlaceholder(string value, string placeholder)
+        {
+            if (!string.IsNullOrEmpty(value)) return;
+            var rect = GUILayoutUtility.GetLastRect();
+            rect.x += 4;
+            GUI.Label(rect, placeholder, _placeholderStyle);
+        }
+
+        private static string BadgeFor(FileChangeKind kind)
+        {
+            switch (kind)
+            {
+                case FileChangeKind.Added: return "A";
+                case FileChangeKind.Deleted: return "D";
+                case FileChangeKind.Renamed: return "R";
+                case FileChangeKind.Untracked: return "N";
+                case FileChangeKind.Conflicted: return "!";
+                default: return "M";
+            }
+        }
+
         private void EnsureStyles()
         {
             if (_logInfoStyle != null) return;
+
+            _placeholderStyle = new GUIStyle(EditorStyles.label) { normal = { textColor = new Color(0.5f, 0.5f, 0.5f) } };
+            _changePathStyle = new GUIStyle(EditorStyles.label) { clipping = TextClipping.Clip };
+
+            var badge = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter };
+            _changeBadgeStyles[FileChangeKind.Modified] = new GUIStyle(badge) { normal = { textColor = new Color(0.9f, 0.7f, 0.2f) } };
+            _changeBadgeStyles[FileChangeKind.Added] = new GUIStyle(badge) { normal = { textColor = new Color(0.35f, 0.75f, 0.4f) } };
+            _changeBadgeStyles[FileChangeKind.Untracked] = new GUIStyle(badge) { normal = { textColor = new Color(0.35f, 0.75f, 0.4f) } };
+            _changeBadgeStyles[FileChangeKind.Deleted] = new GUIStyle(badge) { normal = { textColor = new Color(0.95f, 0.4f, 0.4f) } };
+            _changeBadgeStyles[FileChangeKind.Renamed] = new GUIStyle(badge) { normal = { textColor = new Color(0.4f, 0.7f, 0.95f) } };
+            _changeBadgeStyles[FileChangeKind.Conflicted] = new GUIStyle(badge) { normal = { textColor = new Color(1f, 0.3f, 0.9f) } };
 
             _logInfoStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel) { richText = false };
             _logSuccessStyle = new GUIStyle(_logInfoStyle) { normal = { textColor = new Color(0.35f, 0.75f, 0.4f) } };

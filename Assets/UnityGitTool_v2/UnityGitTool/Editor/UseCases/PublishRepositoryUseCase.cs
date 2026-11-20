@@ -65,7 +65,7 @@ namespace UnityGitTool.UseCases
             if (!status.HasCommits)
             {
                 progress?.Report("Creando commit inicial (puede tardar en proyectos grandes)...");
-                var commit = await _commits.CommitAllAsync(InitialCommitMessage, ct);
+                var commit = await _commits.CommitAllAsync(new CommitMessage(InitialCommitMessage), ct);
                 if (!commit.Success) return Fail(commit.Message);
             }
 

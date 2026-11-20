@@ -49,7 +49,7 @@ namespace UnityGitTool.Git
 
     public interface IGitCommitService
     {
-        Task<OperationResult> CommitAllAsync(string message, CancellationToken cancellationToken);
+        Task<OperationResult> CommitAllAsync(CommitMessage message, CancellationToken cancellationToken);
     }
 
     public interface IGitRemoteService

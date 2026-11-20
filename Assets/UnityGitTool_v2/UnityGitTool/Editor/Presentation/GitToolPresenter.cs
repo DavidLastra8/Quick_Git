@@ -28,6 +28,8 @@ namespace UnityGitTool.Presentation
         private readonly IEditorAssetSynchronizer _assets;
         private readonly IUrlOpener _urlOpener;
         private readonly IProjectInfo _project;
+        private readonly INameSanitizer _branchNames;
+        private readonly INameSanitizer _repositoryNames;
 
         private RepositoryStatus _status = RepositoryStatus.Unknown;
         private IReadOnlyList<GitBranch> _branchList = Array.Empty<GitBranch>();
@@ -49,7 +51,9 @@ namespace UnityGitTool.Presentation
             IAccessTokenStore tokens,
             IEditorAssetSynchronizer assets,
             IUrlOpener urlOpener,
-            IProjectInfo project)
+            IProjectInfo project,
+            INameSanitizer branchNames,
+            INameSanitizer repositoryNames)
         {
             _view = view;
             _inspector = inspector;
@@ -63,6 +67,8 @@ namespace UnityGitTool.Presentation
             _assets = assets;
             _urlOpener = urlOpener;
             _project = project;
+            _branchNames = branchNames;
+            _repositoryNames = repositoryNames;
         }
 
         public void Initialize()
@@ -76,6 +82,8 @@ namespace UnityGitTool.Presentation
             _view.CommitRequested += OnCommit;
             _view.CheckoutRequested += OnCheckout;
             _view.CreateBranchRequested += OnCreateBranch;
+            _view.BranchNameEdited += OnBranchNameEdited;
+            _view.RepositoryNameEdited += OnRepositoryNameEdited;
             _view.InitializeRepositoryRequested += OnInitializeRepository;
             _view.PublishRepositoryRequested += OnPublishRepository;
             _view.SaveTokenRequested += OnSaveToken;
@@ -101,6 +109,8 @@ namespace UnityGitTool.Presentation
             _view.CommitRequested -= OnCommit;
             _view.CheckoutRequested -= OnCheckout;
             _view.CreateBranchRequested -= OnCreateBranch;
+            _view.BranchNameEdited -= OnBranchNameEdited;
+            _view.RepositoryNameEdited -= OnRepositoryNameEdited;
             _view.InitializeRepositoryRequested -= OnInitializeRepository;
             _view.PublishRepositoryRequested -= OnPublishRepository;
             _view.SaveTokenRequested -= OnSaveToken;
@@ -118,9 +128,21 @@ namespace UnityGitTool.Presentation
         private void OnFetch() => Run(FetchAsync);
         private void OnPull(PullStrategy strategy) => Run(() => PullAsync(strategy));
         private void OnPush() => Run(PushAsync);
-        private void OnCommit(string message) => Run(() => CommitAsync(message));
+        private void OnCommit(CommitMessage message) => Run(() => CommitAsync(message));
         private void OnCheckout(GitBranch branch) => Run(() => CheckoutAsync(branch));
         private void OnCreateBranch(string name) => Run(() => CreateBranchAsync(name));
+
+        private void OnBranchNameEdited(string raw)
+        {
+            var fixedName = _branchNames.SanitizeWhileTyping(raw);
+            if (fixedName != raw) _view.ShowBranchName(fixedName);
+        }
+
+        private void OnRepositoryNameEdited(string raw)
+        {
+            var fixedName = _repositoryNames.SanitizeWhileTyping(raw);
+            if (fixedName != raw) _view.ShowRepositoryName(fixedName);
+        }
         private void OnInitializeRepository() => Run(InitializeRepositoryAsync);
         private void OnPublishRepository(CreateRepositoryRequest request) => Run(() => PublishRepositoryAsync(request));
         private void OnSaveToken(string token) => Run(() => SaveTokenAsync(token));
@@ -189,9 +211,17 @@ namespace UnityGitTool.Presentation
             await ExecuteAsync("Haciendo push...", ct => _sync.PushAsync(branch, setUpstream, ct));
         }
 
-        private async Task CommitAsync(string message)
+        private async Task CommitAsync(CommitMessage message)
         {
             if (!await CanActAsync()) return;
+
+            var validation = message.Validate();
+            if (!validation.Success)
+            {
+                Log(validation.Message, LogSeverity.Warning);
+                return;
+            }
+
             if (!SaveOpenWork()) return; // Asegura que lo que hay en disco es lo último del editor.
 
             if (await ExecuteAsync("Creando commit...", ct => _commits.CommitAllAsync(message, ct)))
@@ -216,9 +246,23 @@ namespace UnityGitTool.Presentation
             await ExecuteAsync($"Cambiando a '{branch.LocalName}'...", ct => _branches.CheckoutAsync(branch, ct), touchesWorkingTree: true);
         }
 
-        private async Task CreateBranchAsync(string name)
+        private async Task CreateBranchAsync(string rawName)
         {
             if (!await CanActAsync()) return;
+
+            var name = _branchNames.Sanitize(rawName);
+            if (name.Length == 0)
+            {
+                Log("Introduce un nombre de rama válido.", LogSeverity.Warning);
+                return;
+            }
+
+            if (name != rawName?.Trim())
+            {
+                Log($"Nombre de rama ajustado a '{name}'.", LogSeverity.Info);
+                _view.ShowBranchName(name);
+            }
+
             if (await ExecuteAsync("Creando rama...", ct => _branches.CreateBranchAsync(name, ct)))
                 _view.ClearNewBranchName();
         }
@@ -229,9 +273,16 @@ namespace UnityGitTool.Presentation
             await ExecuteAsync("Inicializando repositorio...", _initializer.InitializeAsync);
         }
 
-        private async Task PublishRepositoryAsync(CreateRepositoryRequest request)
+        private async Task PublishRepositoryAsync(CreateRepositoryRequest rawRequest)
         {
             if (!await CanActAsync()) return;
+
+            var request = new CreateRepositoryRequest(_repositoryNames.Sanitize(rawRequest.Name), rawRequest.Description, rawRequest.IsPrivate);
+            if (request.Name != rawRequest.Name)
+            {
+                if (request.Name.Length > 0) Log($"Nombre del repositorio ajustado a '{request.Name}'.", LogSeverity.Info);
+                _view.ShowRepositoryName(request.Name);
+            }
 
             if (!_tokens.HasToken)
             {
@@ -432,7 +483,7 @@ namespace UnityGitTool.Presentation
                 AccountName = _accountName,
                 HostName = _host.DisplayName,
                 TokenCreationUrl = _host.TokenCreationUrl,
-                DefaultRepositoryName = CreateRepositoryRequest.SanitizeName(_project.Name)
+                DefaultRepositoryName = _repositoryNames.Sanitize(_project.Name)
             });
         }
 

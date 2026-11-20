@@ -10,10 +10,10 @@ namespace UnityGitTool.Git
 
         public GitCommitService(IGitCommandExecutor git) => _git = git;
 
-        public async Task<OperationResult> CommitAllAsync(string message, CancellationToken ct)
+        public async Task<OperationResult> CommitAllAsync(CommitMessage message, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(message))
-                return OperationResult.Fail("El mensaje de commit no puede estar vacío.");
+            var validation = message.Validate();
+            if (!validation.Success) return validation;
 
             var add = await _git.RunAsync(ct, "add", "--all");
             if (!add.Success) return GitOutput.ToResult(add, null, "No se pudieron añadir los cambios");
@@ -22,8 +22,12 @@ namespace UnityGitTool.Git
             var staged = await _git.RunAsync(ct, "diff", "--cached", "--quiet");
             if (staged.Success) return OperationResult.Fail("No hay cambios para hacer commit.");
 
-            var commit = await _git.RunAsync(ct, "commit", "-m", message.Trim());
-            if (commit.Success) return OperationResult.Ok($"Commit creado: \"{message.Trim()}\"");
+            // Cada -m es un párrafo: el primero es el título y el segundo la descripción.
+            var commit = message.HasDescription
+                ? await _git.RunAsync(ct, "commit", "-m", message.Title, "-m", message.Description)
+                : await _git.RunAsync(ct, "commit", "-m", message.Title);
+
+            if (commit.Success) return OperationResult.Ok($"Commit creado: \"{message.Title}\"");
 
             if (commit.BestMessage.Contains("user.email") || commit.BestMessage.Contains("Please tell me who you are"))
                 return OperationResult.Fail(

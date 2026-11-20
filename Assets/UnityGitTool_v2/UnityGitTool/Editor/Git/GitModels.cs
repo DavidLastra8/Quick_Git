@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace UnityGitTool.Git
 {
     public enum RepositoryState
@@ -15,6 +18,32 @@ namespace UnityGitTool.Git
         Rebase
     }
 
+    public enum FileChangeKind
+    {
+        Modified,
+        Added,
+        Deleted,
+        Renamed,
+        Untracked,
+        Conflicted
+    }
+
+    /// <summary>Un archivo con cambios respecto al último commit.</summary>
+    public sealed class GitFileChange
+    {
+        public string Path { get; }
+        public string OldPath { get; }
+        public FileChangeKind Kind { get; }
+        public bool IsMetaFile => Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase);
+
+        public GitFileChange(string path, FileChangeKind kind, string oldPath = null)
+        {
+            Path = path;
+            Kind = kind;
+            OldPath = oldPath;
+        }
+    }
+
     /// <summary>Instantánea del estado del repositorio (parte del Modelo en MVP).</summary>
     public sealed class RepositoryStatus
     {
@@ -27,13 +56,14 @@ namespace UnityGitTool.Git
         public bool IsDetachedHead { get; set; }
         public bool HasCommits { get; set; }
         public string RemoteUrl { get; set; }
-        public int ChangedFiles { get; set; }
+        public IReadOnlyList<GitFileChange> Changes { get; set; } = Array.Empty<GitFileChange>();
         public bool HasUpstream { get; set; }
         public int Ahead { get; set; }
         public int Behind { get; set; }
         public string ErrorMessage { get; set; }
 
         public bool IsRepository => State == RepositoryState.Ready;
+        public int ChangedFiles => Changes.Count;
         public bool HasRemote => !string.IsNullOrEmpty(RemoteUrl);
         public string CurrentBranchLabel => IsDetachedHead ? $"(HEAD separado en {CurrentBranch})" : CurrentBranch;
 

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,8 +43,10 @@ namespace UnityGitTool.Git
             var remote = await _git.RunAsync(ct, "remote", "get-url", "origin");
             status.RemoteUrl = remote.Success ? remote.Output : null;
 
-            var changes = await _git.RunAsync(ct, "status", "--porcelain");
-            status.ChangedFiles = changes.Success ? GitOutput.Lines(changes.Output).Count() : 0;
+            // -z: rutas sin comillas ni escapes (soporta espacios y acentos).
+            // --untracked-files=all: lista cada archivo nuevo, no sólo su carpeta.
+            var changes = await _git.RunAsync(ct, "status", "--porcelain=v1", "-z", "--untracked-files=all");
+            if (changes.Success) status.Changes = GitStatusParser.Parse(changes.Output);
 
             if (status.HasCommits && !status.IsDetachedHead)
                 await ReadAheadBehindAsync(status, ct);

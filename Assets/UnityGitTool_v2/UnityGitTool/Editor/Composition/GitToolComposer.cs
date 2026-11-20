@@ -42,7 +42,9 @@ namespace UnityGitTool.Composition
 
             return new GitToolPresenter(
                 view, inspector, initializer, branches, sync, commits, publish, host, tokens,
-                new UnityEditorAssetSynchronizer(), new UnityUrlOpener(), project);
+                new UnityEditorAssetSynchronizer(), new UnityUrlOpener(), project,
+                branchNames: new GitBranchNameSanitizer(),
+                repositoryNames: new GitHubRepositoryNameSanitizer());
         }
     }
 }

@@ -27,9 +27,15 @@ namespace UnityGitTool.Presentation
         event Action FetchRequested;
         event Action<PullStrategy> PullRequested;
         event Action PushRequested;
-        event Action<string> CommitRequested;
+        event Action<CommitMessage> CommitRequested;
         event Action<GitBranch> CheckoutRequested;
         event Action<string> CreateBranchRequested;
+
+        /// <summary>El usuario ha editado el nombre de la nueva rama (para corregirlo en vivo).</summary>
+        event Action<string> BranchNameEdited;
+
+        /// <summary>El usuario ha editado el nombre del repositorio (para corregirlo en vivo).</summary>
+        event Action<string> RepositoryNameEdited;
         event Action InitializeRepositoryRequested;
         event Action<CreateRepositoryRequest> PublishRepositoryRequested;
         event Action<string> SaveTokenRequested;
@@ -42,5 +48,7 @@ namespace UnityGitTool.Presentation
         bool Confirm(string title, string message);
         void ClearCommitMessage();
         void ClearNewBranchName();
+        void ShowBranchName(string name);
+        void ShowRepositoryName(string name);
     }
 }
