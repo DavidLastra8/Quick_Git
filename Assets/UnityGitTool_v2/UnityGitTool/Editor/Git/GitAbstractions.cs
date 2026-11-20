@@ -38,6 +38,24 @@ namespace UnityGitTool.Git
         Task<OperationResult<IReadOnlyList<GitBranch>>> GetBranchesAsync(CancellationToken cancellationToken);
         Task<OperationResult> CheckoutAsync(GitBranch branch, CancellationToken cancellationToken);
         Task<OperationResult> CreateBranchAsync(string name, CancellationToken cancellationToken);
+
+        /// <summary>True si todos los commits de la rama están ya en "target" (p. ej. "HEAD" u "origin/x").</summary>
+        Task<bool> IsMergedIntoAsync(GitBranch branch, string target, CancellationToken cancellationToken);
+
+        Task<OperationResult> DeleteLocalBranchAsync(GitBranch branch, CancellationToken cancellationToken);
+        Task<OperationResult> DeleteRemoteBranchAsync(GitBranch branch, CancellationToken cancellationToken);
+    }
+
+    /// <summary>Lectura del historial (sólo lectura, separado de quien escribe commits).</summary>
+    public interface IGitCommitReader
+    {
+        Task<OperationResult<string>> GetFullMessageAsync(string revision, CancellationToken cancellationToken);
+    }
+
+    /// <summary>Decide qué ramas están protegidas (no se borran y no aceptan push con errores).</summary>
+    public interface IBranchProtectionPolicy
+    {
+        bool IsProtected(string branchName);
     }
 
     public interface IGitSyncService

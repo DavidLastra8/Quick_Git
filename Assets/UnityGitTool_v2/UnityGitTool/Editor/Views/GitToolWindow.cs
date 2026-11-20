@@ -17,7 +17,8 @@ namespace UnityGitTool.Views
     public sealed class GitToolWindow : EditorWindow, IGitToolView
     {
         private const int MaxLogEntries = 200;
-        private const int MaxVisibleChanges = 300;
+        private const int MaxVisibleChanges = 500;
+        private const int MaxChangeRowsBeforeScroll = 12;
         private static readonly string[] PullStrategyLabels = { "Solo fast-forward (seguro)", "Merge", "Rebase" };
 
         public event Action RefreshRequested;
@@ -29,6 +30,7 @@ namespace UnityGitTool.Views
         public event Action<CommitMessage> CommitRequested;
         public event Action<GitBranch> CheckoutRequested;
         public event Action<string> CreateBranchRequested;
+        public event Action<GitBranch> DeleteBranchRequested;
         public event Action<string> BranchNameEdited;
         public event Action<string> RepositoryNameEdited;
         public event Action InitializeRepositoryRequested;
@@ -64,6 +66,7 @@ namespace UnityGitTool.Views
         [SerializeField] private PullStrategy _pullStrategy = PullStrategy.FastForwardOnly;
         [SerializeField] private bool _accountFoldout = true;
         [SerializeField] private bool _settingsFoldout;
+        [SerializeField] private int _deleteBranchIndex;
         private string _tokenInput = string.Empty; // Nunca se serializa.
         private string _gitExecutableInput;
 
@@ -135,6 +138,17 @@ namespace UnityGitTool.Views
 
         public bool Confirm(string title, string message) =>
             EditorUtility.DisplayDialog(title, message, "Continuar", "Cancelar");
+
+        public DialogChoice Choose(string title, string message, string primary, string alternative)
+        {
+            // DisplayDialogComplex devuelve 0 = ok, 1 = cancel, 2 = alt.
+            switch (EditorUtility.DisplayDialogComplex(title, message, primary, "Cancelar", alternative))
+            {
+                case 0: return DialogChoice.Primary;
+                case 2: return DialogChoice.Alternative;
+                default: return DialogChoice.Cancel;
+            }
+        }
 
         public void ClearCommitMessage()
         {
@@ -311,10 +325,18 @@ namespace UnityGitTool.Views
                     if (GUILayout.Button(status.Behind > 0 ? $"Pull ↓{status.Behind}" : "Pull", GUILayout.Height(24)))
                         PullRequested?.Invoke(_pullStrategy);
 
-                    if (GUILayout.Button(status.Ahead > 0 ? $"Push ↑{status.Ahead}" : "Push", GUILayout.Height(24)))
-                        PushRequested?.Invoke();
+                    using (new EditorGUI.DisabledScope(_state.PushBlockedReason != null))
+                    {
+                        if (GUILayout.Button(status.Ahead > 0 ? $"Push ↑{status.Ahead}" : "Push", GUILayout.Height(24)))
+                            PushRequested?.Invoke();
+                    }
                 }
             }
+
+            if (_state.PushBlockedReason != null)
+                EditorGUILayout.HelpBox("🔒 " + _state.PushBlockedReason, MessageType.Error);
+            else if (_state.IsCurrentBranchProtected)
+                EditorGUILayout.HelpBox($"'{status.CurrentBranch}' es una rama protegida: no admite push con errores de compilación.", MessageType.None);
         }
 
         private void DrawChanges(RepositoryStatus status)
@@ -333,14 +355,19 @@ namespace UnityGitTool.Views
             _hideMetaFiles = EditorGUILayout.ToggleLeft($"Ocultar archivos .meta ({metaCount})", _hideMetaFiles);
 
             var visible = status.Changes.Where(c => !_hideMetaFiles || !c.IsMetaFile).ToList();
-            var height = Mathf.Clamp(visible.Count * 18f + 8f, 30f, 180f);
 
-            _changesScroll = EditorGUILayout.BeginScrollView(_changesScroll, EditorStyles.helpBox, GUILayout.Height(height));
+            // Altura calculada con la altura real de fila: hasta 12 filas visibles, el resto con scroll.
+            var rowHeight = EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
+            var rows = Mathf.Clamp(visible.Count, 1, MaxChangeRowsBeforeScroll);
+            var height = rows * rowHeight + 10f;
+
+            _changesScroll = EditorGUILayout.BeginScrollView(_changesScroll, false, visible.Count > MaxChangeRowsBeforeScroll,
+                GUIStyle.none, GUI.skin.verticalScrollbar, EditorStyles.helpBox, GUILayout.Height(height));
             foreach (var change in visible.Take(MaxVisibleChanges))
             {
-                using (new EditorGUILayout.HorizontalScope())
+                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(EditorGUIUtility.singleLineHeight)))
                 {
-                    GUILayout.Label(BadgeFor(change.Kind), _changeBadgeStyles[change.Kind], GUILayout.Width(18));
+                    GUILayout.Label(new GUIContent(BadgeFor(change.Kind), KindName(change.Kind)), _changeBadgeStyles[change.Kind], GUILayout.Width(18));
                     var path = change.OldPath != null ? $"{change.OldPath} → {change.Path}" : change.Path;
                     GUILayout.Label(new GUIContent(path, path), _changePathStyle);
                 }
@@ -349,12 +376,23 @@ namespace UnityGitTool.Views
             if (visible.Count > MaxVisibleChanges)
                 GUILayout.Label($"... y {visible.Count - MaxVisibleChanges} más", _placeholderStyle);
             EditorGUILayout.EndScrollView();
+
+            var hiddenMeta = _hideMetaFiles ? metaCount : 0;
+            var summary = $"Mostrando {Math.Min(visible.Count, MaxVisibleChanges)} de {status.ChangedFiles}";
+            if (hiddenMeta > 0) summary += $" ({hiddenMeta} .meta ocultos)";
+            if (visible.Count > MaxChangeRowsBeforeScroll) summary += " · desplázate para ver el resto";
+            GUILayout.Label(summary, _placeholderStyle);
         }
 
         private void DrawCommit(RepositoryStatus status)
         {
             EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("Commit", EditorStyles.boldLabel);
+
+            if (_state.HasCompileErrors)
+                EditorGUILayout.HelpBox(
+                    "El proyecto tiene errores de compilación. Puedes hacer commit, pero quedará marcado " +
+                    "y no se podrá subir a main/master (sí a otras ramas).", MessageType.Warning);
 
             _commitTitle = PlaceholderField(EditorGUILayout.TextField(_commitTitle), "Título (resumen corto del cambio)");
 
@@ -403,6 +441,29 @@ namespace UnityGitTool.Views
                         CreateBranchRequested?.Invoke(_newBranchName);
                 }
             }
+
+            DrawDeleteBranch();
+        }
+
+        private void DrawDeleteBranch()
+        {
+            var deletable = _state.DeletableBranches;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (deletable.Count == 0)
+                {
+                    EditorGUILayout.LabelField("Borrar rama", "(no hay ramas que se puedan borrar)", _placeholderStyle);
+                    return;
+                }
+
+                _deleteBranchIndex = Mathf.Clamp(_deleteBranchIndex, 0, deletable.Count - 1);
+                _deleteBranchIndex = EditorGUILayout.Popup("Borrar rama", _deleteBranchIndex, deletable.Select(ToLabel).ToArray());
+
+                if (GUILayout.Button("Borrar", GUILayout.Width(80)))
+                    DeleteBranchRequested?.Invoke(deletable[_deleteBranchIndex]);
+            }
+
+            EditorGUILayout.LabelField("main y master están protegidas: no se pueden borrar desde aquí.", _placeholderStyle);
         }
 
         private void DrawAccount()
@@ -505,7 +566,9 @@ namespace UnityGitTool.Views
         {
             // "/" en un Popup crea submenús: Local/feature/x, Remoto/origin/main...
             var prefix = branch.IsRemote ? "Remoto/" : "Local/";
-            return prefix + branch.Name + (branch.IsCurrent ? "   ✓" : string.Empty);
+            var suffix = branch.IsCurrent ? "   ✓" : string.Empty;
+            if (!branch.IsRemote && branch.ExistsOnRemote) suffix += "   (también en remoto)";
+            return prefix + branch.Name + suffix;
         }
 
         /// <summary>
@@ -534,6 +597,19 @@ namespace UnityGitTool.Views
             var rect = GUILayoutUtility.GetLastRect();
             rect.x += 4;
             GUI.Label(rect, placeholder, _placeholderStyle);
+        }
+
+        private static string KindName(FileChangeKind kind)
+        {
+            switch (kind)
+            {
+                case FileChangeKind.Added: return "Añadido";
+                case FileChangeKind.Deleted: return "Eliminado";
+                case FileChangeKind.Renamed: return "Renombrado";
+                case FileChangeKind.Untracked: return "Nuevo (sin seguimiento)";
+                case FileChangeKind.Conflicted: return "En conflicto";
+                default: return "Modificado";
+            }
         }
 
         private static string BadgeFor(FileChangeKind kind)

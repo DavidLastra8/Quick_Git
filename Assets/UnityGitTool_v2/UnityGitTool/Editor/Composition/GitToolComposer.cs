@@ -33,18 +33,31 @@ namespace UnityGitTool.Composition
 
             var inspector = new GitRepositoryInspector(git);
             var initializer = new GitRepositoryInitializer(git, new UnityGitIgnoreTemplate());
-            var branches = new GitBranchService(git);
             var sync = new GitSyncService(git);
             var commits = new GitCommitService(git);
-            var remotes = new GitRemoteService(git);
             var host = new GitHubRepositoryHost(tokens);
-            var publish = new PublishRepositoryUseCase(inspector, initializer, commits, remotes, sync, host);
+            var health = new UnityProjectHealthChecker();
+            var protection = new ProtectedBranchPolicy("main", "master");
 
-            return new GitToolPresenter(
-                view, inspector, initializer, branches, sync, commits, publish, host, tokens,
-                new UnityEditorAssetSynchronizer(), new UnityUrlOpener(), project,
-                branchNames: new GitBranchNameSanitizer(),
-                repositoryNames: new GitHubRepositoryNameSanitizer());
+            return new GitToolPresenter(view, new GitToolDependencies
+            {
+                Inspector = inspector,
+                Initializer = initializer,
+                Branches = new GitBranchService(git),
+                Sync = sync,
+                CreateCommit = new CreateCommitUseCase(commits, health),
+                Publish = new PublishRepositoryUseCase(inspector, initializer, commits, new GitRemoteService(git), sync, host),
+                PushGuard = new PushGuard(protection, health, new GitCommitReader(git)),
+                BranchProtection = protection,
+                Host = host,
+                Tokens = tokens,
+                Assets = new UnityEditorAssetSynchronizer(),
+                Health = health,
+                UrlOpener = new UnityUrlOpener(),
+                Project = project,
+                BranchNames = new GitBranchNameSanitizer(),
+                RepositoryNames = new GitHubRepositoryNameSanitizer()
+            });
         }
     }
 }

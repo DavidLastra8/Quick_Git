@@ -20,6 +20,12 @@ namespace UnityGitTool.Unity
         void ResumeAutoRefresh(bool refreshNow);
     }
 
+    /// <summary>Estado de "salud" del proyecto. Hoy: errores de compilación; ampliable (tests, etc.).</summary>
+    public interface IProjectHealthChecker
+    {
+        bool HasCompileErrors { get; }
+    }
+
     public interface IUrlOpener
     {
         void Open(string url);

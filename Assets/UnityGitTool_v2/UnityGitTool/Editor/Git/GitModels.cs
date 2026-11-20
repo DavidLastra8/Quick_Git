@@ -80,14 +80,19 @@ namespace UnityGitTool.Git
         public bool IsRemote { get; }
         public bool IsCurrent { get; }
 
+        /// <summary>Rama equivalente en el remoto ("origin/feature"), o null si no existe allí.</summary>
+        public string RemoteBranchName { get; }
+        public bool ExistsOnRemote => RemoteBranchName != null;
+
         /// <summary>Nombre que tendrá la rama en local ("origin/feature/x" → "feature/x").</summary>
         public string LocalName => IsRemote ? Name.Substring(Name.IndexOf('/') + 1) : Name;
 
-        public GitBranch(string name, bool isRemote, bool isCurrent)
+        public GitBranch(string name, bool isRemote, bool isCurrent, string remoteBranchName = null)
         {
             Name = name;
             IsRemote = isRemote;
             IsCurrent = isCurrent;
+            RemoteBranchName = isRemote ? name : remoteBranchName;
         }
     }
 }

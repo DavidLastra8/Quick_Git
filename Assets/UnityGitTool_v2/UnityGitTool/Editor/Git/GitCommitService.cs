@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityGitTool.Core;
@@ -22,10 +23,12 @@ namespace UnityGitTool.Git
             var staged = await _git.RunAsync(ct, "diff", "--cached", "--quiet");
             if (staged.Success) return OperationResult.Fail("No hay cambios para hacer commit.");
 
-            // Cada -m es un párrafo: el primero es el título y el segundo la descripción.
-            var commit = message.HasDescription
-                ? await _git.RunAsync(ct, "commit", "-m", message.Title, "-m", message.Description)
-                : await _git.RunAsync(ct, "commit", "-m", message.Title);
+            // Cada -m es un párrafo: título, descripción y, al final, los trailers.
+            var arguments = new List<string> { "commit", "-m", message.Title };
+            if (message.HasDescription) arguments.AddRange(new[] { "-m", message.Description });
+            if (message.Trailers.Count > 0) arguments.AddRange(new[] { "-m", string.Join("\n", message.Trailers) });
+
+            var commit = await _git.RunAsync(ct, arguments.ToArray());
 
             if (commit.Success) return OperationResult.Ok($"Commit creado: \"{message.Title}\"");
 

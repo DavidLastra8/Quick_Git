@@ -11,6 +11,12 @@ namespace UnityGitTool.Presentation
 
         public RepositoryStatus Status { get; set; } = RepositoryStatus.Unknown;
         public IReadOnlyList<GitBranch> Branches { get; set; } = Array.Empty<GitBranch>();
+        public IReadOnlyList<GitBranch> DeletableBranches { get; set; } = Array.Empty<GitBranch>();
+        public bool IsCurrentBranchProtected { get; set; }
+
+        /// <summary>Motivo por el que no se puede hacer push ahora mismo, o null si sí se puede.</summary>
+        public string PushBlockedReason { get; set; }
+        public bool HasCompileErrors { get; set; }
         public bool HasToken { get; set; }
         public string AccountName { get; set; }
         public string HostName { get; set; } = "GitHub";

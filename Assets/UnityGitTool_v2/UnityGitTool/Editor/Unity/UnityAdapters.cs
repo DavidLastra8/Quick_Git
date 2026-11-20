@@ -49,6 +49,12 @@ namespace UnityGitTool.Unity
         }
     }
 
+    public sealed class UnityProjectHealthChecker : IProjectHealthChecker
+    {
+        // True si la última compilación de scripts falló (los errores rojos de la Consola).
+        public bool HasCompileErrors => EditorUtility.scriptCompilationFailed;
+    }
+
     public sealed class UnityUrlOpener : IUrlOpener
     {
         public void Open(string url)

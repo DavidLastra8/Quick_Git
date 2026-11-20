@@ -4,6 +4,13 @@ using UnityGitTool.Hosting;
 
 namespace UnityGitTool.Presentation
 {
+    public enum DialogChoice
+    {
+        Primary,
+        Alternative,
+        Cancel
+    }
+
     public enum LogSeverity
     {
         Info,
@@ -30,6 +37,7 @@ namespace UnityGitTool.Presentation
         event Action<CommitMessage> CommitRequested;
         event Action<GitBranch> CheckoutRequested;
         event Action<string> CreateBranchRequested;
+        event Action<GitBranch> DeleteBranchRequested;
 
         /// <summary>El usuario ha editado el nombre de la nueva rama (para corregirlo en vivo).</summary>
         event Action<string> BranchNameEdited;
@@ -46,6 +54,9 @@ namespace UnityGitTool.Presentation
         void SetBusy(bool isBusy, string message);
         void AppendLog(string message, LogSeverity severity);
         bool Confirm(string title, string message);
+
+        /// <summary>Diálogo con dos opciones además de Cancelar.</summary>
+        DialogChoice Choose(string title, string message, string primary, string alternative);
         void ClearCommitMessage();
         void ClearNewBranchName();
         void ShowBranchName(string name);
