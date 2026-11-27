@@ -36,9 +36,10 @@ Or add it by hand to `Packages/manifest.json`:
 > credentials are stored.
 
 ### Option B: .unitypackage
-In the source project, right-click `Assets/UnityGitTool` → **Export Package...** → Export.
-In the other project: **Assets → Import Package → Custom Package...**
-Simpler, but updates have to be re-imported by hand.
+1. Download `QuickGit-vX.Y.Z.unitypackage` from the [releases page](https://github.com/DavidLastra8/Quick_Git/releases).
+2. Double-click it, or use **Assets → Import Package → Custom Package...**, and import everything.
+
+The simplest option (no git needed to install), but each update means importing the new `.unitypackage`.
 
 > Use only one option per project. Having the package installed **and** a copy in `Assets`
 > causes a duplicate assembly error.
@@ -60,6 +61,9 @@ Simpler, but updates have to be re-imported by hand.
 3. Update `"version"` in `package.json` and add an entry at the top of `CHANGELOG.md`.
 4. Commit and push.
 5. On GitHub: **Releases → Draft a new release**, create the tag `vX.Y.Z` on `main` and publish it.
+   A GitHub Action (`.github/workflows/release-unitypackage.yml`) then builds `QuickGit-vX.Y.Z.unitypackage`
+   and attaches it to the release automatically. It fails if `package.json` does not have version `X.Y.Z`,
+   so a mismatched release is caught immediately (check the **Actions** tab).
 6. In each project using the package, change `#v1.0.0` to `#vX.Y.Z` in `Packages/manifest.json`.
    To roll back, put the old tag back.
 

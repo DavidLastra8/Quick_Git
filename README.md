@@ -20,7 +20,14 @@ Built with an **MVP architecture and SOLID principles**, so every layer can be t
 
 ## Installation
 
-### Package Manager (recommended)
+### Option A: .unitypackage (easiest)
+1. Download **`QuickGit-v1.0.0.unitypackage`** from the [latest release](https://github.com/DavidLastra8/Quick_Git/releases/latest).
+2. Double-click it, or in Unity use **Assets → Import Package → Custom Package...**, and import everything.
+
+The tool is copied into `Assets/UnityGitTool`. To update, import the `.unitypackage` of the new version over it.
+
+### Option B: Package Manager (easy updates)
+The tool stays out of your `Assets` folder and you update it by changing one version number.
 1. In Unity: **Window → Package Manager**.
 2. **+** button → **Add package from git URL...**
 3. Paste:
@@ -35,9 +42,7 @@ Or add this line to the `dependencies` of `Packages/manifest.json`:
 
 `#v1.0.0` pins the version, so future releases never change your project unless you update the tag.
 
-### .unitypackage
-Copy the `Assets/UnityGitTool` folder into your project, or export it as a `.unitypackage` from this project
-(right-click the folder → **Export Package...**). Updates then have to be copied by hand.
+> Use only one option per project: having the package installed **and** a copy in `Assets` causes a duplicate assembly error.
 
 ## Requirements
 - Unity 2021.3 or newer.
