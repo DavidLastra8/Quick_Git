@@ -15,31 +15,25 @@ Menu: **Tools → Quick Git**.
 
 ## Installation
 
-### Option A: Package Manager (recommended)
+### Option A: .unitypackage
+1. Download `QuickGit-vX.Y.Z.unitypackage` from the [releases page](https://github.com/DavidLastra8/Quick_Git/releases).
+2. Double-click it, or use **Assets → Import Package → Custom Package...**, and import everything.
+
+The simplest option (no git needed to install), but each update means importing the new `.unitypackage`.
+
+### Option B: Package Manager
 1. In Unity: **Window → Package Manager**.
 2. **+** button → **Add package from git URL...**
 3. Paste:
    ```
    https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/QuickGit#v1.0.0
    ```
-   - `?path=` tells Unity which folder of the repository contains the package.
-   - `#v1.0.0` pins the version. Without it you get the latest commit on `main`.
+   - To update later, replace `#v1.0.0` with the tag of the new version. 
 
 Or add it by hand to `Packages/manifest.json`:
 ```json
 "com.davidlastra8.quick-git": "https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/QuickGit#v1.0.0"
 ```
-
-> If the repository is **private**, Unity downloads it with your own git, so git needs GitHub
-> credentials. With Git for Windows, Git Credential Manager opens the browser to sign in the
-> first time. If that fails, make the repository public or clone it once from a terminal so the
-> credentials are stored.
-
-### Option B: .unitypackage
-1. Download `QuickGit-vX.Y.Z.unitypackage` from the [releases page](https://github.com/DavidLastra8/Quick_Git/releases).
-2. Double-click it, or use **Assets → Import Package → Custom Package...**, and import everything.
-
-The simplest option (no git needed to install), but each update means importing the new `.unitypackage`.
 
 > Use only one option per project. Having the package installed **and** a copy in `Assets`
 > causes a duplicate assembly error.
