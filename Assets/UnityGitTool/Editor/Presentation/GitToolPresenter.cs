@@ -555,7 +555,6 @@ namespace UnityGitTool.Presentation
             });
         }
 
-        // ---------------------------------------------------------------- Name previews
 
         private NamePreview BuildRepositoryPreview()
         {

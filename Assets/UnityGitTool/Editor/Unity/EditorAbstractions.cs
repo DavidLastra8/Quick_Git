@@ -1,7 +1,5 @@
 namespace UnityGitTool.Unity
 {
-    // Abstractions over the Unity API: the presenter does not depend on UnityEditor (DIP),
-    // so it can be tested with doubles in an EditMode test or outside Unity.
 
     public interface IProjectInfo
     {

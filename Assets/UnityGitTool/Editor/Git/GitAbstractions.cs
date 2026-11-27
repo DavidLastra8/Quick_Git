@@ -5,8 +5,7 @@ using UnityGitTool.Core;
 
 namespace UnityGitTool.Git
 {
-    // Small, specific interfaces (ISP): each client depends only on what it uses.
-
+    
     /// <summary>Runs git commands in the project directory.</summary>
     public interface IGitCommandExecutor
     {
@@ -17,7 +16,7 @@ namespace UnityGitTool.Git
         Task<CommandResult> RunWithAuthAsync(CancellationToken cancellationToken, params string[] arguments);
     }
 
-    /// <summary>Provides "-c ..." authentication arguments. Open for extension (OCP): GitHub, GitLab, none...</summary>
+    /// <summary>Provides "-c ..." authentication arguments. </summary>
     public interface IGitAuthArgumentsProvider
     {
         IEnumerable<string> GetArguments();
