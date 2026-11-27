@@ -53,7 +53,7 @@ def add_entry(tar, name, data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("folder", help="Folder to package, e.g. Assets/UnityGitTool")
+    parser.add_argument("folder", help="Folder to package, e.g. Assets/QuickGit")
     parser.add_argument("output", help="Output .unitypackage file")
     parser.add_argument("--expect-version", help="Fail unless package.json in the folder has this version")
     args = parser.parse_args()

@@ -22,7 +22,7 @@ to GitHub in one click, commit, pull, push and manage branches from **Tools → 
 1. Download **`QuickGit-v1.0.0.unitypackage`** from the [latest release](https://github.com/DavidLastra8/Quick_Git/releases/latest).
 2. Double-click it, or in Unity use **Assets → Import Package → Custom Package...**, and import everything.
 
-The tool is copied into `Assets/UnityGitTool`. To update, import the `.unitypackage` of the new version over it.
+The tool is copied into `Assets/QuickGit`. To update, import the `.unitypackage` of the new version over it.
 
 ### Option B: Package Manager (easy updates)
 The tool stays out of your `Assets` folder and you update it by changing one version number.
@@ -30,12 +30,12 @@ The tool stays out of your `Assets` folder and you update it by changing one ver
 2. **+** button → **Add package from git URL...**
 3. Paste:
    ```
-   https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/UnityGitTool#v1.0.0
+   https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/QuickGit#v1.0.0
    ```
 
 Or add this line to the `dependencies` of `Packages/manifest.json`:
 ```json
-"com.davidlastra8.unity-git-tool": "https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/UnityGitTool#v1.0.0"
+"com.davidlastra8.quick-git": "https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/QuickGit#v1.0.0"
 ```
 
 `#v1.0.0` pins the version, so future releases never change your project unless you update the tag.
@@ -65,6 +65,6 @@ Or add this line to the `dependencies` of `Packages/manifest.json`:
 4. For a new feature, create a branch under **Branches → New branch**, work there, and merge it into `main` with a Pull Request on GitHub.
 
 ## Documentation
-- [Package README](Assets/UnityGitTool/README.md): full feature list, releasing new versions and architecture.
-- [Changelog](Assets/UnityGitTool/CHANGELOG.md): what changed in each version.
+- [Package README](Assets/QuickGit/README.md): full feature list, releasing new versions and architecture.
+- [Changelog](Assets/QuickGit/CHANGELOG.md): what changed in each version.
 
