@@ -16,31 +16,25 @@ Menu: **Tools → Quick Git**.
 
 ## Installation
 
-### Option A: Package Manager (recommended)
+### Option A: .unitypackage
+1. Download `QuickGit-vX.Y.Z.unitypackage` from the [releases page](https://github.com/DavidLastra8/Quick_Git/releases).
+2. Double-click it, or use **Assets → Import Package → Custom Package...**, and import everything.
+
+The simplest option (no git needed to install), but each update means importing the new `.unitypackage`.
+
+### Option B: Package Manager
 1. In Unity: **Window → Package Manager**.
 2. **+** button → **Add package from git URL...**
 3. Paste:
    ```
    https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/QuickGit#v1.0.0
    ```
-   - `?path=` tells Unity which folder of the repository contains the package.
-   - `#v1.0.0` pins the version. Without it you get the latest commit on `main`.
+   - To update later, replace `#v1.0.0` with the tag of the new version. 
 
 Or add it by hand to `Packages/manifest.json`:
 ```json
 "com.davidlastra8.quick-git": "https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/QuickGit#v1.0.0"
 ```
-
-> If the repository is **private**, Unity downloads it with your own git, so git needs GitHub
-> credentials. With Git for Windows, Git Credential Manager opens the browser to sign in the
-> first time. If that fails, make the repository public or clone it once from a terminal so the
-> credentials are stored.
-
-### Option B: .unitypackage
-1. Download `QuickGit-vX.Y.Z.unitypackage` from the [releases page](https://github.com/DavidLastra8/Quick_Git/releases).
-2. Double-click it, or use **Assets → Import Package → Custom Package...**, and import everything.
-
-The simplest option (no git needed to install), but each update means importing the new `.unitypackage`.
 
 > Use only one option per project. Having the package installed **and** a copy in `Assets`
 > causes a duplicate assembly error.
@@ -54,39 +48,6 @@ The simplest option (no git needed to install), but each update means importing 
   With a fine-grained token, changing visibility and managing collaborators needs the **Administration: write** repository permission.
   It is stored in this machine's EditorPrefs, so it is shared by all your projects and never saved inside a project.
 
-## Releasing a new version
-1. Make and test your changes in the source project.
-2. Pick the new version number ([Semantic Versioning](https://semver.org/)):
-   - `1.0.0 → 1.0.1` bug fixes only,
-   - `1.0.1 → 1.1.0` new features that break nothing,
-   - `1.4.2 → 2.0.0` changes that require users to adapt.
-3. Update `"version"` in `package.json` and add an entry at the top of `CHANGELOG.md`.
-4. Commit and push.
-5. On GitHub: **Releases → Draft a new release**, create the tag `vX.Y.Z` on `main` and publish it.
-   A GitHub Action (`.github/workflows/release-unitypackage.yml`) then builds `QuickGit-vX.Y.Z.unitypackage`
-   and attaches it to the release automatically. It fails if `package.json` does not have version `X.Y.Z`,
-   so a mismatched release is caught immediately (check the **Actions** tab).
-6. In each project using the package, change `#v1.0.0` to `#vX.Y.Z` in `Packages/manifest.json`.
-   To roll back, put the old tag back.
-
-## Architecture (MVP + SOLID)
-```
-Views/        QuickGitWindow                  Passive view (EditorWindow)
-Presentation/ QuickGitPresenter, IQuickGitView, QuickGitViewState, QuickGitDependencies, NamePreview
-UseCases/     PublishRepository, CreateCommit, PushGuard
-Git/          Services over the git CLI, branch name sanitizer, protected branch policy
-Hosting/      Remote hosting abstractions (IRemoteRepositoryHost...)
-GitHub/       GitHub implementation (REST API, authentication, repository names)
-Unity/        Adapters for AssetDatabase, EditorPrefs and compilation state
-Core/         Process execution, OperationResult, INameSanitizer
-Composition/  QuickGitComposer: the only place that creates concrete classes
-```
-- **S**: every service has a single job (detect, branches, sync, commit...).
-- **O**: supporting GitLab means implementing `IRemoteRepositoryHost` and `IGitAuthArgumentsProvider`, without touching the presenter.
-- **L**: any implementation of an interface can replace another one (test doubles included).
-- **I**: small interfaces (`IGitSyncService`, `IGitBranchService`...) instead of one huge `IGitService`.
-- **D**: the presenter only depends on interfaces, never on `UnityEditor` or `Process`, so it can be unit tested.
-
 ## Repository settings and collaborators
 Open **Settings** in the window once the project is on GitHub. The section loads the first time you open it
 (it needs a couple of requests to GitHub); use **Refresh repository settings** to reload it.
@@ -97,6 +58,19 @@ Open **Settings** in the window once the project is on GitHub. The section loads
 - On **personal** repositories every collaborator gets write access (a GitHub rule). On **organization** repositories you can
   choose Read, Triage, Write, Maintain or Admin.
 - Only repository admins can change these settings; other users see them read-only.
+
+## Architecture
+```
+Views/        QuickGitWindow: passive view (EditorWindow)
+Presentation/ QuickGitPresenter, IQuickGitView, QuickGitViewState, QuickGitDependencies, NamePreview
+UseCases/     PublishRepository, CreateCommit, PushGuard
+Git/          Services over the git CLI, branch name sanitizer, protected branch policy
+Hosting/      Remote hosting abstractions (IRemoteRepositoryHost...)
+GitHub/       GitHub implementation (REST API, authentication, repository names)
+Unity/        Adapters for AssetDatabase, EditorPrefs and compilation state
+Core/         Process execution, OperationResult, INameSanitizer
+Composition/  QuickGitComposer: the only place that creates concrete classes
+```
 
 ## Notes
 - The token is never written to `.git/config` or to the remote URL. It is sent as an HTTP header to github.com only.
