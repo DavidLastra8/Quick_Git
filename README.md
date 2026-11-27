@@ -68,4 +68,3 @@ Or add this line to the `dependencies` of `Packages/manifest.json`:
 - [Package README](Assets/UnityGitTool/README.md): full feature list, releasing new versions and architecture.
 - [Changelog](Assets/UnityGitTool/CHANGELOG.md): what changed in each version.
 
-```
