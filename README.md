@@ -5,8 +5,6 @@
 A Unity editor window to work with Git and GitHub without leaving the editor: publish your project
 to GitHub in one click, commit, pull, push and manage branches from **Tools → Quick Git**.
 
-Built with an **MVP architecture and SOLID principles**, so every layer can be tested and extended on its own.
-
 ## Features
 - **Repository detection**: knows whether the project is inside a git repository (also from a subfolder) and whether git is installed.
 - **Publish to GitHub in one click**: initializes the repository, adds a Unity `.gitignore`, makes the first commit, creates the GitHub repository and pushes.
@@ -70,14 +68,4 @@ Or add this line to the `dependencies` of `Packages/manifest.json`:
 - [Package README](Assets/UnityGitTool/README.md): full feature list, releasing new versions and architecture.
 - [Changelog](Assets/UnityGitTool/CHANGELOG.md): what changed in each version.
 
-## Architecture
-```
-Views/        Passive view (EditorWindow): draws state, raises events
-Presentation/ Presenter: validates, confirms and runs every action the same way
-UseCases/     Publish repository, create commit, push guard
-Git/          Services over the git CLI
-GitHub/       GitHub REST API and authentication
-Unity/        Adapters for AssetDatabase, EditorPrefs and compilation state
-Core/         Process execution and operation results
-Composition/  The only place that creates concrete classes
 ```
