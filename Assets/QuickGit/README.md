@@ -48,7 +48,7 @@ Or add it by hand to `Packages/manifest.json`:
 
 ## Architecture
 ```
-Views/        QuickGitWindow                  Passive view (EditorWindow)
+Views/        QuickGitWindow: passive view (EditorWindow)
 Presentation/ QuickGitPresenter, IQuickGitView, QuickGitViewState, QuickGitDependencies, NamePreview
 UseCases/     PublishRepository, CreateCommit, PushGuard
 Git/          Services over the git CLI, branch name sanitizer, protected branch policy
