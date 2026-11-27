@@ -81,11 +81,10 @@ namespace UnityGitTool.Views
         [NonSerialized] private GUIStyle _placeholderStyle, _changePathStyle;
         [NonSerialized] private Dictionary<FileChangeKind, GUIStyle> _changeBadgeStyles;
 
-        [MenuItem("Tools/Git Tool")]
+        [MenuItem("Tools/Quick Git")]
         public static void Open()
         {
             var window = GetWindow<GitToolWindow>();
-            window.titleContent = new GUIContent("Git Tool");
             window.minSize = new Vector2(380, 460);
         }
 
@@ -93,6 +92,8 @@ namespace UnityGitTool.Views
 
         private void OnEnable()
         {
+            // Set here (not only in Open) so windows already docked in a saved layout get the new name too.
+            titleContent = new GUIContent("Quick Git");
             _gitExecutableInput = EditorPrefs.GetString(GitToolComposer.GitExecutablePrefKey, "git");
             _presenter = GitToolComposer.Compose(this);
             _presenter.Initialize();
@@ -142,7 +143,7 @@ namespace UnityGitTool.Views
             if (_log.Count > MaxLogEntries) _log.RemoveAt(0);
             _logScroll.y = float.MaxValue;
 
-            if (severity == LogSeverity.Error) Debug.LogWarning($"[Git Tool] {message}");
+            if (severity == LogSeverity.Error) Debug.LogWarning($"[Quick Git] {message}");
             Repaint();
         }
 
@@ -227,7 +228,7 @@ namespace UnityGitTool.Views
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                var title = _state.Status.IsRepository ? $"⎇ {_state.Status.CurrentBranchLabel}" : "Git Tool";
+                var title = _state.Status.IsRepository ? $"⎇ {_state.Status.CurrentBranchLabel}" : "Quick Git";
                 GUILayout.Label(title, EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
 

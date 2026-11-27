@@ -1,7 +1,7 @@
-# Unity Git Tool
+# Quick Git
 
 An editor window to work with Git and GitHub without leaving Unity.
-Menu: **Tools → Git Tool**.
+Menu: **Tools → Quick Git**.
 
 ## Features
 - Detects whether the project is inside a git repository (also from a subfolder) and whether git is installed.

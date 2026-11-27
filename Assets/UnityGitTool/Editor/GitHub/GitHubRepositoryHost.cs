@@ -21,7 +21,7 @@ namespace UnityGitTool.GitHub
         private readonly IAccessTokenStore _tokens;
 
         public string DisplayName => "GitHub";
-        public string TokenCreationUrl => "https://github.com/settings/tokens/new?scopes=repo&description=Unity%20Git%20Tool";
+        public string TokenCreationUrl => "https://github.com/settings/tokens/new?scopes=repo&description=Quick%20Git";
 
         public GitHubRepositoryHost(IAccessTokenStore tokens) => _tokens = tokens;
 
@@ -110,7 +110,7 @@ namespace UnityGitTool.GitHub
         private static HttpClient CreateHttpClient()
         {
             var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("UnityGitTool/1.0");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("QuickGit/1.0");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
             client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
             return client;

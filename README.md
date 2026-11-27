@@ -3,7 +3,7 @@
 **Version 1.0.0**
 
 A Unity editor window to work with Git and GitHub without leaving the editor: publish your project
-to GitHub in one click, commit, pull, push and manage branches from **Tools → Git Tool**.
+to GitHub in one click, commit, pull, push and manage branches from **Tools → Quick Git**.
 
 Built with an **MVP architecture and SOLID principles**, so every layer can be tested and extended on its own.
 
@@ -51,7 +51,7 @@ Copy the `Assets/UnityGitTool` folder into your project, or export it as a `.uni
   It is stored in your machine's EditorPrefs, so it works in all your projects and is never saved inside a project.
 
 ## Quick start
-1. Open **Tools → Git Tool**.
+1. Open **Tools → Quick Git**.
 2. If the project is not on GitHub yet, type a name and press **Create repository and publish**.
 3. Daily loop:
    - **Fetch** to see if there is anything new (↓),
