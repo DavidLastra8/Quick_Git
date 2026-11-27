@@ -52,22 +52,7 @@ The simplest option (no git needed to install), but each update means importing 
 - A GitHub personal access token (**Account** section of the window). A classic token with the `repo` scope works.
   It is stored in this machine's EditorPrefs, so it is shared by all your projects and never saved inside a project.
 
-## Releasing a new version
-1. Make and test your changes in the source project.
-2. Pick the new version number ([Semantic Versioning](https://semver.org/)):
-   - `1.0.0 → 1.0.1` bug fixes only,
-   - `1.0.1 → 1.1.0` new features that break nothing,
-   - `1.4.2 → 2.0.0` changes that require users to adapt.
-3. Update `"version"` in `package.json` and add an entry at the top of `CHANGELOG.md`.
-4. Commit and push.
-5. On GitHub: **Releases → Draft a new release**, create the tag `vX.Y.Z` on `main` and publish it.
-   A GitHub Action (`.github/workflows/release-unitypackage.yml`) then builds `QuickGit-vX.Y.Z.unitypackage`
-   and attaches it to the release automatically. It fails if `package.json` does not have version `X.Y.Z`,
-   so a mismatched release is caught immediately (check the **Actions** tab).
-6. In each project using the package, change `#v1.0.0` to `#vX.Y.Z` in `Packages/manifest.json`.
-   To roll back, put the old tag back.
-
-## Architecture (MVP + SOLID)
+## Architecture
 ```
 Views/        QuickGitWindow                  Passive view (EditorWindow)
 Presentation/ QuickGitPresenter, IQuickGitView, QuickGitViewState, QuickGitDependencies, NamePreview
@@ -79,11 +64,6 @@ Unity/        Adapters for AssetDatabase, EditorPrefs and compilation state
 Core/         Process execution, OperationResult, INameSanitizer
 Composition/  QuickGitComposer: the only place that creates concrete classes
 ```
-- **S**: every service has a single job (detect, branches, sync, commit...).
-- **O**: supporting GitLab means implementing `IRemoteRepositoryHost` and `IGitAuthArgumentsProvider`, without touching the presenter.
-- **L**: any implementation of an interface can replace another one (test doubles included).
-- **I**: small interfaces (`IGitSyncService`, `IGitBranchService`...) instead of one huge `IGitService`.
-- **D**: the presenter only depends on interfaces, never on `UnityEditor` or `Process`, so it can be unit tested.
 
 ## Notes
 - The token is never written to `.git/config` or to the remote URL. It is sent as an HTTP header to github.com only.
