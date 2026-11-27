@@ -20,14 +20,14 @@ Menu: **Tools → Git Tool**.
 2. **+** button → **Add package from git URL...**
 3. Paste:
    ```
-   https://github.com/DavidLastra8/Test_Tool.git?path=/Assets/UnityGitTool#v1.0.0
+   https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/UnityGitTool#v1.0.0
    ```
    - `?path=` tells Unity which folder of the repository contains the package.
    - `#v1.0.0` pins the version. Without it you get the latest commit on `main`.
 
 Or add it by hand to `Packages/manifest.json`:
 ```json
-"com.davidlastra8.unity-git-tool": "https://github.com/DavidLastra8/Test_Tool.git?path=/Assets/UnityGitTool#v1.0.0"
+"com.davidlastra8.unity-git-tool": "https://github.com/DavidLastra8/Quick_Git.git?path=/Assets/UnityGitTool#v1.0.0"
 ```
 
 > If the repository is **private**, Unity downloads it with your own git, so git needs GitHub
