@@ -24,6 +24,13 @@ namespace QuickGit.Presentation
         private string _accountName;
         private string _repositoryNameInput; // null = the user has not touched it yet (the default name is used)
         private string _branchNameInput = string.Empty;
+
+        // Remote repository settings, loaded on demand (they need network calls).
+        private RemoteRepositoryRef _remoteLoadedFor;
+        private RemoteRepositoryInfo _remoteInfo;
+        private IReadOnlyList<RemoteCollaborator> _collaborators = Array.Empty<RemoteCollaborator>();
+        private IReadOnlyList<RemoteInvitation> _invitations = Array.Empty<RemoteInvitation>();
+        private string _remoteError;
         private CancellationTokenSource _cancellation;
         private Task _backgroundRefresh = Task.CompletedTask;
         private bool _isBusy;
@@ -55,6 +62,11 @@ namespace QuickGit.Presentation
             _view.SaveTokenRequested += OnSaveToken;
             _view.ClearTokenRequested += OnClearToken;
             _view.OpenRemoteRequested += OnOpenRemote;
+            _view.RemoteSettingsRequested += OnRemoteSettingsRequested;
+            _view.VisibilityChangeRequested += OnVisibilityChange;
+            _view.InviteCollaboratorRequested += OnInviteCollaborator;
+            _view.RemoveCollaboratorRequested += OnRemoveCollaborator;
+            _view.CancelInvitationRequested += OnCancelInvitation;
 
             Render();
             Run(InitialLoadAsync);
@@ -83,6 +95,11 @@ namespace QuickGit.Presentation
             _view.SaveTokenRequested -= OnSaveToken;
             _view.ClearTokenRequested -= OnClearToken;
             _view.OpenRemoteRequested -= OnOpenRemote;
+            _view.RemoteSettingsRequested -= OnRemoteSettingsRequested;
+            _view.VisibilityChangeRequested -= OnVisibilityChange;
+            _view.InviteCollaboratorRequested -= OnInviteCollaborator;
+            _view.RemoveCollaboratorRequested -= OnRemoveCollaborator;
+            _view.CancelInvitationRequested -= OnCancelInvitation;
         }
 
         // ---------------------------------------------------------------- View events
@@ -103,6 +120,11 @@ namespace QuickGit.Presentation
         private void OnPublishRepository(CreateRepositoryRequest request) => Run(() => PublishRepositoryAsync(request));
         private void OnSaveToken(string token) => Run(() => SaveTokenAsync(token));
         private void OnClearToken() => Run(ClearTokenAsync);
+        private void OnRemoteSettingsRequested() => Run(LoadRemoteSettingsAsync);
+        private void OnVisibilityChange(bool makePrivate) => Run(() => ChangeVisibilityAsync(makePrivate));
+        private void OnInviteCollaborator(string login, CollaboratorPermission permission) => Run(() => InviteCollaboratorAsync(login, permission));
+        private void OnRemoveCollaborator(RemoteCollaborator collaborator) => Run(() => RemoveCollaboratorAsync(collaborator));
+        private void OnCancelInvitation(RemoteInvitation invitation) => Run(() => CancelInvitationAsync(invitation));
         private void OnOpenRemote() => _deps.UrlOpener.Open(RemoteUrlFormatter.ToWebUrl(_status.RemoteUrl));
 
         private void OnBranchNameEdited(string raw)
@@ -384,6 +406,7 @@ namespace QuickGit.Presentation
             }
 
             _deps.Tokens.Save(token.Trim());
+            ForgetRemoteSettings();
             await ExecuteAsync("Verifying token...", AuthenticateAsync);
         }
 
@@ -392,8 +415,195 @@ namespace QuickGit.Presentation
             if (!await CanActAsync()) return;
             _deps.Tokens.Clear();
             _accountName = null;
+            ForgetRemoteSettings();
             Log("Token removed.", LogSeverity.Info);
             Render();
+        }
+
+        // ---------------------------------------------------------------- Remote repository settings
+
+        private async Task LoadRemoteSettingsAsync()
+        {
+            if (!await CanActAsync()) return;
+            await ExecuteAsync($"Loading {_deps.Host.DisplayName} repository settings...", LoadRemoteSettingsCoreAsync);
+        }
+
+        private async Task ChangeVisibilityAsync(bool makePrivate)
+        {
+            if (!await CanActAsync() || !RequireRemoteAdmin()) return;
+            if (_remoteInfo.IsPrivate == makePrivate) return;
+
+            var name = _remoteInfo.Repository.FullName;
+            var confirmed = makePrivate
+                ? _view.Confirm("Make repository private",
+                    $"'{name}' will become PRIVATE: only you and its collaborators will be able to see it.\n\n" +
+                    "Anyone else who relies on it (links, clones, package installs) will lose access.\n\nContinue?")
+                : _view.Confirm("Make repository public",
+                    $"'{name}' will become PUBLIC: anyone on the internet will be able to see and clone its code " +
+                    "and its WHOLE history, including old commits.\n\n" +
+                    "Make sure no commit contains secrets (tokens, passwords, keys).\n\nContinue?");
+
+            if (!confirmed)
+            {
+                Log("Visibility change cancelled.", LogSeverity.Info);
+                Render(); // Puts the visibility dropdown back.
+                return;
+            }
+
+            var repository = _remoteInfo.Repository;
+            await ExecuteAsync("Changing visibility...", async ct =>
+            {
+                var result = await _deps.RemoteSettings.SetVisibilityAsync(repository, makePrivate, ct);
+                if (result.Success) await LoadRemoteSettingsCoreAsync(ct);
+                return result;
+            });
+        }
+
+        private async Task InviteCollaboratorAsync(string login, CollaboratorPermission permission)
+        {
+            if (!await CanActAsync() || !RequireRemoteAdmin()) return;
+
+            if (string.IsNullOrWhiteSpace(login))
+            {
+                Log("Type the GitHub username of the person you want to invite.", LogSeverity.Warning);
+                return;
+            }
+
+            var repository = _remoteInfo;
+            var invited = await ExecuteAsync($"Inviting {login.Trim()}...", async ct =>
+            {
+                var result = await _deps.Collaborators.InviteAsync(repository, login, permission, ct);
+                if (result.Success) await LoadRemoteSettingsCoreAsync(ct);
+                return result;
+            });
+
+            if (invited) _view.ClearCollaboratorInput();
+        }
+
+        private async Task RemoveCollaboratorAsync(RemoteCollaborator collaborator)
+        {
+            if (collaborator == null || !await CanActAsync() || !RequireRemoteAdmin()) return;
+
+            if (collaborator.IsOwner)
+            {
+                Log("The owner of the repository cannot be removed.", LogSeverity.Warning);
+                return;
+            }
+
+            if (!_view.Confirm("Remove collaborator",
+                    $"@{collaborator.Login} will lose access to '{_remoteInfo.Repository.FullName}'.\n\nContinue?"))
+                return;
+
+            var repository = _remoteInfo.Repository;
+            await ExecuteAsync($"Removing @{collaborator.Login}...", async ct =>
+            {
+                var result = await _deps.Collaborators.RemoveCollaboratorAsync(repository, collaborator.Login, ct);
+                if (result.Success) await LoadRemoteSettingsCoreAsync(ct);
+                return result;
+            });
+        }
+
+        private async Task CancelInvitationAsync(RemoteInvitation invitation)
+        {
+            if (invitation == null || !await CanActAsync() || !RequireRemoteAdmin()) return;
+
+            if (!_view.Confirm("Cancel invitation", $"Cancel the pending invitation for @{invitation.Login}?"))
+                return;
+
+            var repository = _remoteInfo.Repository;
+            await ExecuteAsync($"Cancelling invitation for @{invitation.Login}...", async ct =>
+            {
+                var result = await _deps.Collaborators.CancelInvitationAsync(repository, invitation, ct);
+                if (result.Success) await LoadRemoteSettingsCoreAsync(ct);
+                return result;
+            });
+        }
+
+        /// <summary>Loads repo info and, if the user is an admin, its collaborators and invitations.</summary>
+        private async Task<OperationResult> LoadRemoteSettingsCoreAsync(CancellationToken ct)
+        {
+            var reason = GetRemoteSettingsUnavailableReason(out var repository);
+            if (reason != null) return OperationResult.Fail(reason);
+
+            _remoteLoadedFor = repository;
+            _collaborators = Array.Empty<RemoteCollaborator>();
+            _invitations = Array.Empty<RemoteInvitation>();
+
+            var info = await _deps.RemoteSettings.GetInfoAsync(repository, ct);
+            if (!info.Success)
+            {
+                _remoteInfo = null;
+                _remoteError = info.Message;
+                return OperationResult.Fail(info.Message);
+            }
+
+            _remoteInfo = info.Value;
+            _remoteError = null;
+            if (!_remoteInfo.CanAdminister) return OperationResult.Ok();
+
+            var collaborators = await _deps.Collaborators.GetCollaboratorsAsync(_remoteInfo, ct);
+            if (collaborators.Success) _collaborators = collaborators.Value;
+            else _remoteError = collaborators.Message;
+
+            var invitations = await _deps.Collaborators.GetInvitationsAsync(repository, ct);
+            if (invitations.Success) _invitations = invitations.Value;
+            else _remoteError = _remoteError ?? invitations.Message;
+
+            return _remoteError == null ? OperationResult.Ok() : OperationResult.Fail(_remoteError);
+        }
+
+        /// <summary>Null if the remote settings can be used; otherwise the reason why not.</summary>
+        private string GetRemoteSettingsUnavailableReason(out RemoteRepositoryRef repository)
+        {
+            repository = null;
+            if (!_status.HasRemote)
+                return $"The repository is not on {_deps.Host.DisplayName} yet. Publish it first.";
+            if (!_deps.RemoteLocator.TryParse(_status.RemoteUrl, out repository))
+                return $"The 'origin' remote is not a {_deps.Host.DisplayName} repository.";
+            if (!_deps.Tokens.HasToken)
+                return $"Add a {_deps.Host.DisplayName} token in the Account section to manage the repository.";
+            return null;
+        }
+
+        private RemoteSettingsViewState BuildRemoteSettingsState()
+        {
+            if (!_status.IsRepository) return RemoteSettingsViewState.Hidden;
+
+            var reason = GetRemoteSettingsUnavailableReason(out var repository);
+            if (reason != null) return new RemoteSettingsViewState(RemoteSettingsStatus.Unavailable, reason);
+
+            // Loaded data belongs to another repository (e.g. the remote changed): reload.
+            if (!repository.SameAs(_remoteLoadedFor))
+                return new RemoteSettingsViewState(RemoteSettingsStatus.NotLoaded, null);
+
+            if (_remoteInfo == null)
+                return new RemoteSettingsViewState(RemoteSettingsStatus.NotLoaded, _remoteError);
+
+            return new RemoteSettingsViewState(RemoteSettingsStatus.Loaded, _remoteError, _remoteInfo, _collaborators, _invitations);
+        }
+
+        private bool RequireRemoteAdmin()
+        {
+            if (_remoteInfo == null)
+            {
+                Log($"Load the {_deps.Host.DisplayName} repository settings first.", LogSeverity.Warning);
+                return false;
+            }
+
+            if (_remoteInfo.CanAdminister) return true;
+
+            Log($"You are not an admin of '{_remoteInfo.Repository.FullName}', so you cannot change its settings.", LogSeverity.Warning);
+            Render();
+            return false;
+        }
+
+        private void ForgetRemoteSettings()
+        {
+            _remoteLoadedFor = null;
+            _remoteInfo = null;
+            _remoteError = null;
+            _collaborators = Array.Empty<RemoteCollaborator>();
+            _invitations = Array.Empty<RemoteInvitation>();
         }
 
         // ---------------------------------------------------------------- Infrastructure
@@ -547,6 +757,7 @@ namespace QuickGit.Presentation
                 HasCompileErrors = _deps.Health.HasCompileErrors,
                 RepositoryPreview = BuildRepositoryPreview(),
                 BranchPreview = BuildBranchPreview(),
+                RemoteSettings = BuildRemoteSettingsState(),
                 HasToken = _deps.Tokens.HasToken,
                 AccountName = _accountName,
                 HostName = _deps.Host.DisplayName,

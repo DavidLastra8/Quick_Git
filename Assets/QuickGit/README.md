@@ -11,6 +11,7 @@ Menu: **Tools → Quick Git**.
 - **Changed files** list showing the change type (M/U/A/D/R/!), with an option to hide `.meta` files.
 - **Branches**: switch instantly from the dropdown, create and delete them (locally and on GitHub).
 - **Names fixed while typing** (spaces, accents, forbidden characters), with a preview of how the repository or branch will look on GitHub.
+- **Repository settings** (Settings → GitHub repository): make the repository public or private, invite collaborators, remove them and manage pending invitations.
 - **Protected branches** (`main`/`master`): pushing is blocked if the project has compile errors or the last commit was made with errors. Other branches are not affected.
 
 ## Installation
@@ -50,6 +51,7 @@ The simplest option (no git needed to install), but each update means importing 
 - Your git identity configured:
   `git config --global user.name "..."` and `git config --global user.email "..."`.
 - A GitHub personal access token (**Account** section of the window). A classic token with the `repo` scope works.
+  With a fine-grained token, changing visibility and managing collaborators needs the **Administration: write** repository permission.
   It is stored in this machine's EditorPrefs, so it is shared by all your projects and never saved inside a project.
 
 ## Releasing a new version
@@ -84,6 +86,17 @@ Composition/  QuickGitComposer: the only place that creates concrete classes
 - **L**: any implementation of an interface can replace another one (test doubles included).
 - **I**: small interfaces (`IGitSyncService`, `IGitBranchService`...) instead of one huge `IGitService`.
 - **D**: the presenter only depends on interfaces, never on `UnityEditor` or `Process`, so it can be unit tested.
+
+## Repository settings and collaborators
+Open **Settings** in the window once the project is on GitHub. The section loads the first time you open it
+(it needs a couple of requests to GitHub); use **Refresh repository settings** to reload it.
+- **Visibility**: choosing Private/Public applies it after a confirmation. Making a repository public exposes its whole history,
+  so check that no commit contains secrets first.
+- **Invite user**: type a GitHub username and press Invite. The person gets a GitHub notification and email and must
+  **accept the invitation** before they can push. Until then it appears under *Pending invitations*, where you can cancel it.
+- On **personal** repositories every collaborator gets write access (a GitHub rule). On **organization** repositories you can
+  choose Read, Triage, Write, Maintain or Admin.
+- Only repository admins can change these settings; other users see them read-only.
 
 ## Notes
 - The token is never written to `.git/config` or to the remote URL. It is sent as an HTTP header to github.com only.

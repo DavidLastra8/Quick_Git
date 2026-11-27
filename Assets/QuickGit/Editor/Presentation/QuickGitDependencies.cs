@@ -22,6 +22,9 @@ namespace QuickGit.Presentation
         public IPushGuard PushGuard { get; set; }
         public IBranchProtectionPolicy BranchProtection { get; set; }
         public IRemoteRepositoryHost Host { get; set; }
+        public IRemoteRepositoryLocator RemoteLocator { get; set; }
+        public IRemoteRepositorySettings RemoteSettings { get; set; }
+        public IRemoteCollaboratorService Collaborators { get; set; }
         public IAccessTokenStore Tokens { get; set; }
         public IEditorAssetSynchronizer Assets { get; set; }
         public IProjectHealthChecker Health { get; set; }

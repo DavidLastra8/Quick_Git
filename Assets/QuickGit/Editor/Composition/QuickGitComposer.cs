@@ -37,7 +37,8 @@ namespace QuickGit.Composition
             var initializer = new GitRepositoryInitializer(git, new UnityGitIgnoreTemplate());
             var sync = new GitSyncService(git);
             var commits = new GitCommitService(git);
-            var host = new GitHubRepositoryHost(tokens);
+            var gitHubApi = new GitHubApiClient(tokens);
+            var host = new GitHubRepositoryHost(gitHubApi);
             var health = new UnityProjectHealthChecker();
             var protection = new ProtectedBranchPolicy("main", "master");
 
@@ -52,6 +53,9 @@ namespace QuickGit.Composition
                 PushGuard = new PushGuard(protection, health, new GitCommitReader(git)),
                 BranchProtection = protection,
                 Host = host,
+                RemoteLocator = new GitHubRemoteLocator(),
+                RemoteSettings = new GitHubRepositorySettings(gitHubApi),
+                Collaborators = new GitHubCollaboratorService(gitHubApi),
                 Tokens = tokens,
                 Assets = new UnityEditorAssetSynchronizer(),
                 Health = health,

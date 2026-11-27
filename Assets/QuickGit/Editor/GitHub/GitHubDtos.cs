@@ -41,5 +41,68 @@ namespace QuickGit.GitHub
         public string field;
         public string code;
     }
+    [Serializable]
+    internal sealed class GitHubOwnerDto
+    {
+        public string login;
+        public string type;
+    }
+
+    [Serializable]
+    internal sealed class GitHubPermissionsDto
+    {
+        public bool admin;
+        public bool push;
+        public bool pull;
+    }
+
+    [Serializable]
+    internal sealed class GitHubRepositoryDetailsDto
+    {
+        public string full_name;
+        public string html_url;
+        public bool @private;
+        public GitHubOwnerDto owner;
+        public GitHubPermissionsDto permissions;
+    }
+
+    [Serializable]
+    internal sealed class GitHubVisibilityBody
+    {
+        public bool @private;
+    }
+
+    [Serializable]
+    internal sealed class GitHubCollaboratorPermissionBody
+    {
+        public string permission;
+    }
+
+    [Serializable]
+    internal sealed class GitHubCollaboratorDto
+    {
+        public string login;
+        public string role_name;
+    }
+
+    [Serializable]
+    internal sealed class GitHubCollaboratorListDto
+    {
+        public GitHubCollaboratorDto[] items;
+    }
+
+    [Serializable]
+    internal sealed class GitHubInvitationDto
+    {
+        public long id;
+        public GitHubUserDto invitee;
+        public string permissions;
+    }
+
+    [Serializable]
+    internal sealed class GitHubInvitationListDto
+    {
+        public GitHubInvitationDto[] items;
+    }
 #pragma warning restore 0649, IDE1006
 }

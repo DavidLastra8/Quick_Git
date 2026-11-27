@@ -1,8 +1,8 @@
 {
   "name": "com.davidlastra8.quick-git",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Quick Git",
-  "description": "Editor window to work with Git and GitHub without leaving Unity: detect and publish repositories, commit with description, changed files list, fetch/pull/push, create, switch and delete branches, and block pushes to main with compile errors. MVP + SOLID architecture.",
+  "description": "Editor window to work with Git and GitHub without leaving Unity: detect and publish repositories, commit with description, changed files list, fetch/pull/push, create, switch and delete branches, change repository visibility, manage collaborators, and block pushes to main with compile errors. MVP + SOLID architecture.",
   "unity": "2021.3",
   "author": {
     "name": "DavidLastra8",

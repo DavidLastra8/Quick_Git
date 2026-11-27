@@ -38,6 +38,11 @@ namespace QuickGit.Views
         public event Action<string> SaveTokenRequested;
         public event Action ClearTokenRequested;
         public event Action OpenRemoteRequested;
+        public event Action RemoteSettingsRequested;
+        public event Action<bool> VisibilityChangeRequested;
+        public event Action<string, CollaboratorPermission> InviteCollaboratorRequested;
+        public event Action<RemoteCollaborator> RemoveCollaboratorRequested;
+        public event Action<RemoteInvitation> CancelInvitationRequested;
 
         [Serializable]
         private struct LogEntry
@@ -67,6 +72,12 @@ namespace QuickGit.Views
         [SerializeField] private PullStrategy _pullStrategy = PullStrategy.FastForwardOnly;
         [SerializeField] private bool _accountFoldout = true;
         [SerializeField] private bool _settingsFoldout;
+        [SerializeField] private string _inviteLogin = string.Empty;
+        [SerializeField] private CollaboratorPermission _invitePermission = CollaboratorPermission.Write;
+
+        // Actions that may open a modal dialog run after OnGUI has finished its layout,
+        // so the dialog never interrupts a half-drawn window.
+        [NonSerialized] private Action _deferredAction;
         [SerializeField] private int _deleteBranchIndex;
         private string _tokenInput = string.Empty; // Never serialized.
         private string _gitExecutableInput;
@@ -182,6 +193,13 @@ namespace QuickGit.Views
             Repaint();
         }
 
+        public void ClearCollaboratorInput()
+        {
+            _inviteLogin = string.Empty;
+            GUIUtility.keyboardControl = 0;
+            Repaint();
+        }
+
         public void ShowRepositoryName(string name)
         {
             _repositoryName = name ?? string.Empty;
@@ -222,6 +240,20 @@ namespace QuickGit.Views
 
             DrawBusyBar();
             DrawLog();
+
+            if (_deferredAction != null && Event.current.type == EventType.Repaint)
+            {
+                var action = _deferredAction;
+                _deferredAction = null;
+                EditorApplication.delayCall += () => action();
+            }
+        }
+
+        /// <summary>Runs the action once the current OnGUI pass is complete.</summary>
+        private void Defer(Action action)
+        {
+            _deferredAction = action;
+            Repaint();
         }
 
         private void DrawToolbar()
@@ -528,9 +560,20 @@ namespace QuickGit.Views
 
         private void DrawSettings()
         {
+            var wasOpen = _settingsFoldout;
             _settingsFoldout = EditorGUILayout.Foldout(_settingsFoldout, "Settings", true);
             if (!_settingsFoldout) return;
 
+            // Opening the section loads the remote settings once (they need network calls).
+            if (!wasOpen && _state.RemoteSettings.Status == RemoteSettingsStatus.NotLoaded)
+                Defer(() => RemoteSettingsRequested?.Invoke());
+
+            DrawRemoteRepositorySettings();
+            DrawGitExecutableSettings();
+        }
+
+        private void DrawGitExecutableSettings()
+        {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 _gitExecutableInput = EditorGUILayout.TextField("Git executable", _gitExecutableInput);
@@ -548,6 +591,124 @@ namespace QuickGit.Views
                     OnEnable();
                 }
             }
+        }
+
+        private void DrawRemoteRepositorySettings()
+        {
+            var remote = _state.RemoteSettings;
+            if (remote.Status == RemoteSettingsStatus.Hidden) return;
+
+            EditorGUILayout.LabelField($"{_state.HostName} repository", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                switch (remote.Status)
+                {
+                    case RemoteSettingsStatus.Unavailable:
+                        EditorGUILayout.HelpBox(remote.Message, MessageType.Info);
+                        return;
+
+                    case RemoteSettingsStatus.NotLoaded:
+                        if (!string.IsNullOrEmpty(remote.Message))
+                            EditorGUILayout.HelpBox(remote.Message, MessageType.Error);
+                        if (GUILayout.Button("Load repository settings"))
+                            RemoteSettingsRequested?.Invoke();
+                        return;
+                }
+
+                var info = remote.Info;
+                EditorGUILayout.LabelField("Repository", info.Repository.FullName);
+
+                if (!info.CanAdminister)
+                    EditorGUILayout.HelpBox(
+                        "You are not an admin of this repository, so its settings are read-only.", MessageType.Info);
+
+                using (new EditorGUI.DisabledScope(!info.CanAdminister))
+                {
+                    // Like the branch dropdown: picking a value applies it (after confirmation).
+                    var current = info.IsPrivate ? 0 : 1;
+                    var selected = EditorGUILayout.Popup("Visibility", current, new[] { "Private", "Public" });
+                    if (selected != current)
+                        Defer(() => VisibilityChangeRequested?.Invoke(selected == 0));
+                }
+
+                if (info.CanAdminister) DrawCollaborators(remote, info);
+
+                if (!string.IsNullOrEmpty(remote.Message))
+                    EditorGUILayout.HelpBox(remote.Message, MessageType.Warning);
+
+                if (GUILayout.Button("Refresh repository settings"))
+                    RemoteSettingsRequested?.Invoke();
+            }
+        }
+
+        private void DrawCollaborators(RemoteSettingsViewState remote, RemoteRepositoryInfo info)
+        {
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField($"Collaborators ({remote.Collaborators.Count})", EditorStyles.miniBoldLabel);
+
+            foreach (var collaborator in remote.Collaborators)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("@" + collaborator.Login);
+                    GUILayout.Label(collaborator.IsOwner ? "owner" : collaborator.Role, _placeholderStyle, GUILayout.Width(60));
+
+                    using (new EditorGUI.DisabledScope(collaborator.IsOwner))
+                    {
+                        if (GUILayout.Button("Remove", GUILayout.Width(70)))
+                        {
+                            var target = collaborator;
+                            Defer(() => RemoveCollaboratorRequested?.Invoke(target));
+                        }
+                    }
+                }
+            }
+
+            if (remote.Invitations.Count > 0)
+            {
+                EditorGUILayout.Space(2);
+                EditorGUILayout.LabelField($"Pending invitations ({remote.Invitations.Count})", EditorStyles.miniBoldLabel);
+
+                foreach (var invitation in remote.Invitations)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.LabelField("@" + invitation.Login);
+                        GUILayout.Label("pending", _placeholderStyle, GUILayout.Width(60));
+
+                        if (GUILayout.Button("Cancel", GUILayout.Width(70)))
+                        {
+                            var target = invitation;
+                            Defer(() => CancelInvitationRequested?.Invoke(target));
+                        }
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(4);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                _inviteLogin = EditorGUILayout.TextField("Invite user", _inviteLogin);
+
+                if (info.IsOrganization)
+                    _invitePermission = (CollaboratorPermission)EditorGUILayout.EnumPopup(_invitePermission, GUILayout.Width(80));
+
+                using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_inviteLogin)))
+                {
+                    if (GUILayout.Button("Invite", GUILayout.Width(70)))
+                    {
+                        var login = _inviteLogin;
+                        var permission = _invitePermission;
+                        InviteCollaboratorRequested?.Invoke(login, permission);
+                    }
+                }
+            }
+
+            EditorGUILayout.LabelField(
+                info.IsOrganization
+                    ? "Type their GitHub username. They must accept the invitation before they get access."
+                    : "Type their GitHub username. On personal repositories every collaborator gets write access, and they must accept the invitation first.",
+                EditorStyles.wordWrappedMiniLabel);
         }
 
         private void DrawBusyBar()

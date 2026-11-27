@@ -4,6 +4,17 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this package follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - Unreleased
+### Added
+- **Settings → GitHub repository** section, available once the project is on GitHub:
+  - Switch the repository between **private and public**, with a warning before each change.
+  - **Collaborators**: list them, invite by GitHub username, remove them, and see or cancel
+    pending invitations. Organization repositories also let you pick the permission level.
+  - Read-only view when you are not an admin of the repository.
+
+### Changed
+- GitHub HTTP calls go through a single `GitHubApiClient` (shared headers, token and error messages).
+
 ## [1.0.0] - 2026-11-20
 ### Added
 - Repository and git installation detection.

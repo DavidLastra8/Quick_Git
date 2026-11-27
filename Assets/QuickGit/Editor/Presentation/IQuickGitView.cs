@@ -50,6 +50,13 @@ namespace QuickGit.Presentation
         event Action ClearTokenRequested;
         event Action OpenRemoteRequested;
 
+        // Remote repository settings (visibility and collaborators).
+        event Action RemoteSettingsRequested;
+        event Action<bool> VisibilityChangeRequested; // true = make private
+        event Action<string, CollaboratorPermission> InviteCollaboratorRequested;
+        event Action<RemoteCollaborator> RemoveCollaboratorRequested;
+        event Action<RemoteInvitation> CancelInvitationRequested;
+
         void Render(QuickGitViewState state);
         void SetBusy(bool isBusy, string message);
         void AppendLog(string message, LogSeverity severity);
@@ -61,5 +68,6 @@ namespace QuickGit.Presentation
         void ClearNewBranchName();
         void ShowBranchName(string name);
         void ShowRepositoryName(string name);
+        void ClearCollaboratorInput();
     }
 }

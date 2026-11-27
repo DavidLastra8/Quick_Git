@@ -21,6 +21,8 @@ namespace QuickGit.Presentation
         /// <summary>Preview of the repository and branch to create (null = show nothing).</summary>
         public NamePreview RepositoryPreview { get; set; }
         public NamePreview BranchPreview { get; set; }
+
+        public RemoteSettingsViewState RemoteSettings { get; set; } = RemoteSettingsViewState.Hidden;
         public bool HasToken { get; set; }
         public string AccountName { get; set; }
         public string HostName { get; set; } = "GitHub";
